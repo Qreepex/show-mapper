@@ -14,7 +14,7 @@ never needs a toolchain.
 | Target | Toolchain notes |
 | --- | --- |
 | linux/amd64 | `apt install build-essential libasound2-dev pkg-config` (RtMidi uses ALSA) |
-| windows/amd64 | MinGW-w64 g++ (e.g. `choco install mingw` or the msys2 UCRT64 toolchain we install in CI) |
+| windows/amd64 | MinGW g++ (`choco install mingw`; CI installs per job).**Release builds link `-extldflags=-static`** — no libstdc++/libgcc/winpthread DLLs needed on end-user machines. |
 | darwin/amd64, darwin/arm64 | Xcode CLT (present on GH runners); links CoreMIDI/CoreAudio frameworks |
 
 Local builds: `make build` (CGO) / `make build-nocgo` (portable). Version info
@@ -49,6 +49,8 @@ toolchain there - add when there's real demand (❗ verify `midi list` on the
 resulting binary).
 
 ## Code signing / quarantine (current: unsigned)
+
+- Missing-DLL error (`libstdc++-6.dll not found`)? That means a *dynamically linked* local build. Release binaries are self-contained (static C/C++ runtime). For local dev builds either copy MinGW's DLLs next to the exe or pass `-ldflags '-extldflags=-static'`.
 
 - macOS: binaries are unsigned → first run: `xattr -d com.apple.quarantine`
   or right-click → Open. Notarization is a future (paid-cert) topic.

@@ -113,7 +113,13 @@ jobs:
           ver="${GITHUB_REF_NAME#v}"
           out="dist/${{ matrix.name }}/show-mapper${{ matrix.ext }}"
           mkdir -p "dist/${{ matrix.name }}"
-          go build -trimpath -ldflags "-s -w \
+          # windows: statically link the mingw C/C++ runtimes — end users don't
+          # have libstdc++-6.dll / libgcc_s_seh-1.dll / winpthread installed.
+          extldflags=""
+          if [ "${{ matrix.goos }}" = windows ]; then
+            extldflags="-extldflags=-static"
+          fi
+          go build -trimpath -ldflags "-s -w $extldflags \
             -X github.com/Qreepex/show-mapper/internal/version.Version=${ver} \
             -X github.com/Qreepex/show-mapper/internal/version.Commit=${GITHUB_SHA} \
             -X github.com/Qreepex/show-mapper/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
