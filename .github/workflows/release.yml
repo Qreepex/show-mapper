@@ -39,22 +39,8 @@ jobs:
               ext: ".exe",
               packaging: zip,
             }
-          - {
-              name: darwin-amd64,
-              os: macos-13,
-              goos: darwin,
-              goarch: amd64,
-              ext: "",
-              packaging: tar,
-            }
-          - {
-              name: darwin-arm64,
-              os: macos-latest,
-              goos: darwin,
-              goarch: arm64,
-              ext: "",
-              packaging: tar,
-            }
+          # darwin (amd64/arm64) paused for now — re-add two entries here with
+          # os: macos-13 / macos-latest when a mac build is needed again.
     steps:
       - uses: actions/checkout@v7
 
@@ -77,14 +63,28 @@ jobs:
         if: matrix.goos == 'linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
 
-      - name: Windows CGo toolchain (MinGW-w64 via msys2)
+      - name: Windows CGo toolchain (MinGW g++ via Chocolatey)
         if: matrix.goos == 'windows'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: UCRT64
-          update: true
-          path-type: inherit
-          install: mingw-w64-ucrt-x86_64-gcc
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v g++ >/dev/null 2>&1; then
+            choco install mingw -y
+          fi
+          for d in /c/ProgramData/mingw64/opt/mingw64/bin "/c/Program Files/mingw64/bin" /c/mingw64/bin; do
+            [ -d "$d" ] && echo "$d" >> "$GITHUB_PATH" || true
+          done
+          command -v gcc || true
+          command -v g++ || true
+
+      - name: Verify Windows toolchain
+        if: matrix.goos == 'windows'
+        shell: bash
+        run: |
+          command -v gcc
+          command -v g++
+          gcc --version | head -1
+          g++ --version | head -1
 
       - name: Build binary (CGO on)
         shell: bash
@@ -92,22 +92,17 @@ jobs:
           CGO_ENABLED: "1"
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          # Explicit toolchain paths keep us independent of PATH quirks (msys2/git-bash).
           CC: gcc
           CXX: g++
         run: |
           set -euo pipefail
-          if [ "${{ matrix.goos }}" = windows ]; then
-            export CC='/c/msys64/ucrt64/bin/gcc.exe'
-            export CXX='/c/msys64/ucrt64/bin/g++.exe'
-          fi
           ver="${GITHUB_REF_NAME#v}"
           out="dist/${{ matrix.name }}/show-mapper${{ matrix.ext }}"
           mkdir -p "dist/${{ matrix.name }}"
           go build -trimpath -ldflags "-s -w \
-            -X github.com/qreepex/show-mapper/internal/version.Version=${ver} \
-            -X github.com/qreepex/show-mapper/internal/version.Commit=${GITHUB_SHA} \
-            -X github.com/qreepex/show-mapper/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -X github.com/Qreepex/show-mapper/internal/version.Version=${ver} \
+            -X github.com/Qreepex/show-mapper/internal/version.Commit=${GITHUB_SHA} \
+            -X github.com/Qreepex/show-mapper/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             -o "$out" ./cmd/show-mapper
           cp README.md LICENSE show-mapper.example.yaml "dist/${{ matrix.name }}/"
           "./dist/${{ matrix.name }}/show-mapper${{ matrix.ext }}" version

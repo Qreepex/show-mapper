@@ -284,9 +284,10 @@ CGO is unavoidable for real device I/O (RtMidi C++). Therefore:
   tests run everywhere, no toolchain needed.
 - **Releases**: native builders per OS/arch in GitHub Actions
   (no cross-compilation of C++): linux/amd64 + linux/arm64 (gcc+ALSA headers),
-  windows/amd64 (MinGW-w64 gcc), darwin/amd64 + darwin/arm64 (clang).
-  Version via git tag → ldflags into `internal/version`. The same assets feed
-  the built-in self-updater (checksums validated). Details + platform notes:
+  windows/amd64 (MinGW gcc); darwin currently paused (re-enable by adding the
+  two matrix rows in release.yml). Version via git tag → ldflags into
+  `internal/version`. The same assets feed the built-in self-updater
+  (checksums validated). Details + platform notes:
   [releasing.md](releasing.md).
 
 ---
