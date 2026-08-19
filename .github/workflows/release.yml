@@ -15,11 +15,46 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: linux-amd64, os: ubuntu-latest, goos: linux, goarch: amd64, ext: "", packaging: tar }
-          - { name: linux-arm64, os: ubuntu-24.04-arm, goos: linux, goarch: arm64, ext: "", packaging: tar }
-          - { name: windows-amd64, os: windows-latest, goos: windows, goarch: amd64, ext: ".exe", packaging: zip }
-          - { name: darwin-amd64, os: macos-13, goos: darwin, goarch: amd64, ext: "", packaging: tar }
-          - { name: darwin-arm64, os: macos-latest, goos: darwin, goarch: arm64, ext: "", packaging: tar }
+          - {
+              name: linux-amd64,
+              os: ubuntu-latest,
+              goos: linux,
+              goarch: amd64,
+              ext: "",
+              packaging: tar,
+            }
+          - {
+              name: linux-arm64,
+              os: ubuntu-24.04-arm,
+              goos: linux,
+              goarch: arm64,
+              ext: "",
+              packaging: tar,
+            }
+          - {
+              name: windows-amd64,
+              os: windows-latest,
+              goos: windows,
+              goarch: amd64,
+              ext: ".exe",
+              packaging: zip,
+            }
+          - {
+              name: darwin-amd64,
+              os: macos-13,
+              goos: darwin,
+              goarch: amd64,
+              ext: "",
+              packaging: tar,
+            }
+          - {
+              name: darwin-arm64,
+              os: macos-latest,
+              goos: darwin,
+              goarch: arm64,
+              ext: "",
+              packaging: tar,
+            }
     steps:
       - uses: actions/checkout@v4
 
@@ -67,15 +102,15 @@ jobs:
             export CXX='/c/msys64/ucrt64/bin/g++.exe'
           fi
           ver="${GITHUB_REF_NAME#v}"
-          out="dist/${{ matrix.name }}/showbridge${{ matrix.ext }}"
+          out="dist/${{ matrix.name }}/show-mapper${{ matrix.ext }}"
           mkdir -p "dist/${{ matrix.name }}"
           go build -trimpath -ldflags "-s -w \
-            -X github.com/yourorg/showbridge/internal/version.Version=${ver} \
-            -X github.com/yourorg/showbridge/internal/version.Commit=${GITHUB_SHA} \
-            -X github.com/yourorg/showbridge/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            -o "$out" ./cmd/showbridge
-          cp README.md LICENSE showbridge.example.yaml "dist/${{ matrix.name }}/"
-          "./dist/${{ matrix.name }}/showbridge${{ matrix.ext }}" version
+            -X github.com/qreepex/show-mapper/internal/version.Version=${ver} \
+            -X github.com/qreepex/show-mapper/internal/version.Commit=${GITHUB_SHA} \
+            -X github.com/qreepex/show-mapper/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -o "$out" ./cmd/show-mapper
+          cp README.md LICENSE show-mapper.example.yaml "dist/${{ matrix.name }}/"
+          "./dist/${{ matrix.name }}/show-mapper${{ matrix.ext }}" version
 
       - name: Package (tar.gz)
         if: matrix.packaging == 'tar'
@@ -83,19 +118,19 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
-          tar -czf "showbridge_${GITHUB_REF_NAME#v}_${{ matrix.name }}.tar.gz" -C "${{ matrix.name }}" .
+          tar -czf "show-mapper_${GITHUB_REF_NAME#v}_${{ matrix.name }}.tar.gz" -C "${{ matrix.name }}" .
 
       - name: Package (zip)
         if: matrix.packaging == 'zip'
         shell: pwsh
         run: |
           $ver = "${env:GITHUB_REF_NAME}" -replace '^v',''
-          Compress-Archive -Path "dist/${{ matrix.name }}/*" -DestinationPath "dist/showbridge_${ver}_${{ matrix.name }}.zip" -Force
+          Compress-Archive -Path "dist/${{ matrix.name }}/*" -DestinationPath "dist/show-mapper_${ver}_${{ matrix.name }}.zip" -Force
 
       - uses: actions/upload-artifact@v4
         with:
           name: pkg-${{ matrix.name }}
-          path: dist/showbridge_*
+          path: dist/show-mapper_*
           if-no-files-found: error
 
   release:
@@ -111,7 +146,7 @@ jobs:
       - name: checksums
         run: |
           cd pkgs
-          sha256sum showbridge_* | tee checksums.txt
+          sha256sum show-mapper_* | tee checksums.txt
           ls -la
       - uses: softprops/action-gh-release@v2
         with:

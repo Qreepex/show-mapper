@@ -26,10 +26,11 @@ import (
 
 // Server wires HTTP routes to the config store and the conductor.
 type Server struct {
-	cfgFile *config.File
-	cond    *core.Conductor
-	hub     *Hub
-	http    *http.Server
+	cfgFile     *config.File
+	cond        *core.Conductor
+	hub         *Hub
+	http        *http.Server
+	openBrowser bool
 
 	upmu    sync.Mutex
 	upcache *updater.UpdateStatus
@@ -37,7 +38,7 @@ type Server struct {
 
 // New builds the server. hub receives broadcasts AND serves /ws.
 func New(cfgFile *config.File, cond *core.Conductor, hub *Hub) *Server {
-	s := &Server{cfgFile: cfgFile, cond: cond, hub: hub}
+	s := &Server{cfgFile: cfgFile, cond: cond, hub: hub, openBrowser: cfgFile.Get().HTTP.ShouldOpenBrowser()}
 	hub.SetSnapshot(s.snapshot)
 	hub.SetClientHandler(s.handleClientMessage)
 
@@ -73,11 +74,21 @@ func New(cfgFile *config.File, cond *core.Conductor, hub *Hub) *Server {
 func (s *Server) Run(ctx context.Context) error {
 	errCh := make(chan error, 1)
 	go func() {
+		ln, err := net.Listen("tcp", s.http.Addr)
+		if err != nil {
+			errCh <- fmt.Errorf("listen %s: %w", s.http.Addr, err)
+			return
+		}
 		slog.Info("web UI listening", "addr", "http://"+s.http.Addr)
 		if hint := wslLocalhostHint(s.http.Addr); hint != "" {
 			slog.Info(hint)
 		}
-		errCh <- s.http.ListenAndServe()
+		if s.openBrowser {
+			if err := OpenBrowser(openUIURL(s.http.Addr)); err != nil {
+				slog.Debug("could not open browser", "err", err)
+			}
+		}
+		errCh <- s.http.Serve(ln)
 	}()
 	select {
 	case <-ctx.Done():

@@ -94,6 +94,7 @@ func cmdServe(args []string) int {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
 	cfgPath := fs.String("config", "", "path to config file (default: search order, see docs)")
 	listen := fs.String("listen", "", "override http.listen (e.g. 0.0.0.0:8484)")
+	noBrowser := fs.Bool("no-browser", false, "do not open the web UI in a browser at startup")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -122,6 +123,11 @@ func cmdServe(args []string) int {
 	cfg := cfgFile.Get()
 	if *listen != "" {
 		cfg.HTTP.Listen = *listen
+		cfgFile.Set(cfg)
+	}
+	feFalse := false
+	if *noBrowser {
+		cfg.HTTP.OpenBrowser = &feFalse
 		cfgFile.Set(cfg)
 	}
 	slog.Info("config loaded", "path", cfgFile.Path,

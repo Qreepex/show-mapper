@@ -30,9 +30,11 @@ compiled in; nothing device- or console-specific lives at the top level.
    `_linux_arm64.tar.gz`, `_darwin_arm64.tar.gz`, `_darwin_amd64.tar.gz`) and
    extract it anywhere — no installer.
 2. Run it (`show-mapper.exe` / `./show-mapper`). On first start a minimal
-   `show-mapper.yaml` is generated automatically next to it.
-3. Open the printed URL (default <http://127.0.0.1:8484>); everything else is
-   done in the web UI. Hand edits of the YAML hot-reload without a restart.
+   `show-mapper.yaml` is generated automatically next to it, and the web UI
+   **opens in your browser automatically** (suppress with `-no-browser` or
+   `http.openBrowser: false`).
+3. The UI defaults to <http://127.0.0.1:8484>; everything else is configured
+   in the web UI. Hand edits of the YAML hot-reload without a restart.
 
 **WSL2 note:** the UI normally gets relayed to Windows localhost automatically.
 If `http://localhost:8484` won't open from Windows: run `wsl --shutdown` in

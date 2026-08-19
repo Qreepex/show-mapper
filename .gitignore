@@ -15,8 +15,7 @@ internal/server/dist/*
 !internal/server/dist/200.html
 
 # --- Local runtime config (never commit a show IP config by accident) ---
-showbridge.yaml
-showbridge.yml
+show-mapper.yaml
 *.bak
 
 # --- OS/editor cruft ---

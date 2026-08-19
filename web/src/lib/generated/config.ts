@@ -123,6 +123,11 @@ export interface HTTPConfig {
    * There is no authentication yet — see docs/architecture.md (Security).
    */
   listen: string;
+  /**
+   * OpenBrowser controls whether the UI is opened in the system browser at
+   * startup (default true). `show-mapper serve -no-browser` overrides.
+   */
+  openBrowser?: boolean;
 }
 /**
  * SourceConfig describes one physical/logical event source instance,

@@ -119,6 +119,14 @@ type HTTPConfig struct {
 	// Set to "0.0.0.0:8484" (or ":8484") to expose it on the show network.
 	// There is no authentication yet — see docs/architecture.md (Security).
 	Listen string `yaml:"listen" json:"listen"`
+	// OpenBrowser controls whether the UI is opened in the system browser at
+	// startup (default true). `show-mapper serve -no-browser` overrides.
+	OpenBrowser *bool `yaml:"openBrowser,omitempty" json:"openBrowser,omitempty"`
+}
+
+// ShouldOpenBrowser resolves the default (true unless explicitly false).
+func (h HTTPConfig) ShouldOpenBrowser() bool {
+	return h.OpenBrowser == nil || *h.OpenBrowser
 }
 
 // SourceConfig describes one physical/logical event source instance,

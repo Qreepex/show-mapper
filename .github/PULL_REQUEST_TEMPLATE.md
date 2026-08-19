@@ -11,4 +11,4 @@ Hardware profiles: state how you verified the mapping (see CONTRIBUTING.md).
 - [ ] Docs updated (README status table / docs/* where applicable)
 - [ ] New hardware data verified against the physical device (`midi monitor`)
 - [ ] No new dependency without justification in this PR
-- [ ] No `showbridge.yaml`, built frontend assets, or secrets committed
+- [ ] No `show-mapper.yaml`, built frontend assets, or secrets committed
