@@ -115,8 +115,8 @@ var ControlKinds = []string{"pad", "button", "fader", "encoder"}
 
 // HTTPConfig configures the embedded web server (UI + API + WebSocket).
 type HTTPConfig struct {
-	// Listen is the address the web UI binds to. Defaults to 127.0.0.1:8080.
-	// Set to "0.0.0.0:8080" (or ":8080") to expose it on the show network.
+	// Listen is the address the web UI binds to. Defaults to 127.0.0.1:8484.
+	// Set to "0.0.0.0:8484" (or ":8484") to expose it on the show network.
 	// There is no authentication yet — see docs/architecture.md (Security).
 	Listen string `yaml:"listen" json:"listen"`
 }
@@ -254,7 +254,7 @@ const (
 func Default() Config {
 	return Config{
 		Version: SchemaVersion,
-		HTTP:    HTTPConfig{Listen: "127.0.0.1:8080"},
+		HTTP:    HTTPConfig{Listen: "127.0.0.1:8484"},
 	}
 }
 
@@ -338,7 +338,7 @@ func LoadPath(path string) (*File, error) {
 
 // starterHeader is prepended to auto-generated starter configs.
 const starterHeader = `# show-mapper configuration — generated automatically on first start.
-# Open the web UI (printed at startup, default http://127.0.0.1:8080) to add
+# Open the web UI (printed at startup, default http://127.0.0.1:8484) to add
 # boards / targets / mappings. Hand edits of this file are hot-reloaded.
 # Full annotated example: show-mapper.example.yaml
 
@@ -454,7 +454,7 @@ func (f *File) Save() error {
 
 func (c *Config) applyDefaults() {
 	if c.HTTP.Listen == "" {
-		c.HTTP.Listen = "127.0.0.1:8080"
+		c.HTTP.Listen = "127.0.0.1:8484"
 	}
 	for i := range c.Bindings {
 		b := &c.Bindings[i]

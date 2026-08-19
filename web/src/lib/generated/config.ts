@@ -87,7 +87,7 @@ export interface ProfileLED {
    * Colors maps color names to velocity values for style velocity
    * (empty = APC-mini-1 scheme: green=1, red=3, yellow=5).
    */
-  colors?: { [key: string]: number /* int */};
+  colors?: { [key: string]: number /* int */ };
 }
 /**
  * ProfileControl is one control of a user-defined profile.
@@ -118,8 +118,8 @@ export interface ProfileControl {
  */
 export interface HTTPConfig {
   /**
-   * Listen is the address the web UI binds to. Defaults to 127.0.0.1:8080.
-   * Set to "0.0.0.0:8080" (or ":8080") to expose it on the show network.
+   * Listen is the address the web UI binds to. Defaults to 127.0.0.1:8484.
+   * Set to "0.0.0.0:8484" (or ":8484") to expose it on the show network.
    * There is no authentication yet — see docs/architecture.md (Security).
    */
   listen: string;
@@ -139,7 +139,7 @@ export interface SourceConfig {
   /**
    * Options holds connector-type-specific settings (decoded by the connector).
    */
-  options?: { [key: string]: any};
+  options?: { [key: string]: any };
 }
 /**
  * TargetConfig describes one output target instance, e.g. a grandMA3 console.
@@ -147,7 +147,7 @@ export interface SourceConfig {
 export interface TargetConfig {
   id: string;
   type: string; // e.g. "osc", future: "artnet", "sacn", ...
-  options?: { [key: string]: any};
+  options?: { [key: string]: any };
 }
 /**
  * Binding maps an event on a source control to an action on a target.
