@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,9 +16,10 @@ import (
 // It implements core.Sink so the conductor can broadcast without importing
 // the HTTP layer.
 type Hub struct {
-	mu         sync.Mutex
-	clients    map[*wsClient]struct{}
-	snapshotFn func() Envelope
+	mu            sync.Mutex
+	clients       map[*wsClient]struct{}
+	snapshotFn    func() Envelope
+	clientHandler ClientHandler
 }
 
 // NewHub creates a Hub. Call SetSnapshot before serving clients.
@@ -29,10 +31,17 @@ func NewHub() *Hub {
 // message every new client receives right after connecting.
 func (h *Hub) SetSnapshot(fn func() Envelope) { h.snapshotFn = fn }
 
+// SetClientHandler registers the handler for inbound "client.*" messages.
+func (h *Hub) SetClientHandler(fn ClientHandler) { h.clientHandler = fn }
+
 type wsClient struct {
 	conn *websocket.Conn
 	send chan []byte
 }
+
+// ClientHandler receives application-level messages from web clients
+// ("client.*" types, see docs/protocols.md). Set via SetClientHandler.
+type ClientHandler func(env Envelope)
 
 // Broadcast implements core.Sink. Slow clients that can't keep up
 // (full buffer) are dropped — the UI shows a reconnect state anyway.
@@ -114,14 +123,15 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// reader loop: clients currently send nothing app-level; reading keeps
-	// pongs flowing and detects closure. Inbound commands land here later
-	// (docs/protocols.md reserves "client.*" message types).
+	// reader loop: app-level messages are dot-namespaced "client.*" and routed
+	// to the registered handler; reading also keeps pongs flowing and detects
+	// closure.
 	for {
-		_, _, err := conn.Read(ctx)
+		_, data, err := conn.Read(ctx)
 		if err != nil {
 			break
 		}
+		h.dispatchClient(data)
 	}
 
 	h.mu.Lock()
@@ -133,6 +143,26 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 		slog.Debug("ws write failed", "err", err)
 	default:
 	}
+}
+
+// dispatchClient parses and routes one inbound message.
+func (h *Hub) dispatchClient(data []byte) {
+	if h.clientHandler == nil {
+		return
+	}
+	var env Envelope
+	if err := json.Unmarshal(data, &env); err != nil {
+		return // garbage from a non-app client: ignore
+	}
+	if !strings.HasPrefix(env.Type, "client.") {
+		return // inbound outside the client.* namespace is reserved
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("client handler panicked", "type", env.Type, "panic", r)
+		}
+	}()
+	h.clientHandler(env)
 }
 
 func marshalEnvelope(msgType string, data any) ([]byte, error) {

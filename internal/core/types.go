@@ -113,6 +113,13 @@ type Target interface {
 	Type() string
 }
 
+// EventInjector is an optional interface for VIRTUAL sources (no hardware):
+// it accepts events programmatically, e.g. the in-browser virtual surface
+// (source type "sim") fed by the web UI via WS.
+type EventInjector interface {
+	Inject(ev Event) error
+}
+
 // FeedbackSink is an optional interface for sources that can update the
 // visuals of their physical controls: LEDs on MIDI pads/buttons today,
 // LCD key images/labels on Elgato Stream Decks next, etc.

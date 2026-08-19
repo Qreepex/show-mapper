@@ -1,3 +1,7 @@
+/* Global tokens + base element styles only.
+   Component styles live inside the components (web/src/lib/ui/*),
+   pages must not carry scoped CSS. */
+
 :root {
   color-scheme: dark;
   --bg: #0f1115;
@@ -23,82 +27,22 @@ body {
 
 a { color: var(--accent); }
 
-h1 { font-size: 1.35rem; margin: 0 0 .5rem; }
-h2 { font-size: 1.05rem; margin: 0 0 .6rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-
-.page { max-width: 1200px; margin: 0 auto; padding: 1rem; }
-
-.card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: .6rem;
-  padding: 1rem;
-}
-
-button {
-  background: var(--panel-2);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: .4rem;
-  padding: .4rem .8rem;
-  cursor: pointer;
-  font: inherit;
-}
-button:hover { border-color: var(--accent); }
-button.primary { background: #1d3b53; border-color: #2c5878; }
-button.danger { color: var(--err); }
-button:disabled { opacity: .5; cursor: not-allowed; }
-
-input, select {
-  background: #0c0f14;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: .35rem;
-  padding: .35rem .5rem;
-  font: inherit;
-}
-input:focus, select:focus { outline: 1px solid var(--accent); }
-label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: .25rem; }
+h1 { font-size: 1.35rem; margin: 0; }
 
 table { border-collapse: collapse; width: 100%; }
-th, td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--border); font-size: .9rem; }
+th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
 th { color: var(--muted); font-weight: 600; }
 
-.badge {
-  display: inline-block;
-  padding: .1rem .5rem;
-  border-radius: 999px;
-  font-size: .75rem;
-  border: 1px solid var(--border);
-}
-.badge.ok { color: var(--ok); border-color: var(--ok); }
-.badge.err { color: var(--err); border-color: var(--err); }
-.badge.warn { color: var(--warn); border-color: var(--warn); }
-.badge.muted { color: var(--muted); }
+code { background: var(--panel-2); padding: 0 0.3em; border-radius: 0.3em; }
+pre { white-space: pre-wrap; }
 
-.dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; margin-right: .4rem; }
-.dot.connected { background: var(--ok); }
-.dot.error { background: var(--err); }
-.dot.connecting { background: var(--warn); }
-.dot.disconnected { background: var(--muted); }
-
+/* ---------- utilities ---------- */
+.wrap { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+.row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+.rowline { display: flex; gap: 0.8rem; align-items: flex-end; flex-wrap: wrap; }
+.grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.grow { flex: 1; min-width: 10rem; }
+.spread { margin-left: auto; }
 .muted { color: var(--muted); }
-.mono { font-family: "Cascadia Code", ui-monospace, monospace; font-size: .85rem; }
-.row { display: flex; gap: .6rem; align-items: center; }
-.grid { display: grid; gap: 1rem; }
-.grow { flex: 1; }
-
-.flash-ok { color: var(--ok); }
-.flash-err { color: var(--err); white-space: pre-wrap; }
-
-.btnlike {
-  display: inline-block;
-  background: var(--panel-2);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 0.4rem;
-  padding: 0.4rem 0.8rem;
-  text-decoration: none;
-  font: inherit;
-}
-.btnlike:hover { border-color: var(--accent); }
+.mono { font-family: ui-monospace, "Cascadia Code", monospace; font-size: 0.85rem; }
+.mt { margin-top: 1rem; }

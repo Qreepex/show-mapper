@@ -232,6 +232,22 @@ type ConnectorStatus struct {
 	Status Status `json:"status"`
 }
 
+// InjectEvent pushes an externally produced event into a source (virtual
+// surfaces like "sim"), where it flows through the normal dispatch path.
+func (c *Conductor) InjectEvent(sourceID string, ev Event) error {
+	c.mu.Lock()
+	src, ok := c.sources[sourceID]
+	c.mu.Unlock()
+	if !ok {
+		return fmt.Errorf("no source %q", sourceID)
+	}
+	inj, ok := src.(EventInjector)
+	if !ok {
+		return fmt.Errorf("source %q (%s) does not accept injected events", sourceID, src.Type())
+	}
+	return inj.Inject(ev)
+}
+
 // SnapshotConn is the per-instance part of Snapshot().
 type SnapshotConn struct {
 	ID       string    `json:"id"`

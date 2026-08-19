@@ -58,8 +58,15 @@ CI runs: `go vet`, `go test`, `go build` (CGO off), `npm run check`, `npm run bu
 - **Svelte 5 runes only**: `$state`, `$derived`, `$effect`, `$props()`.
   Forbidden: `$:` statements, `export let`, `on:click` directives (use
   `onclick={...}`), `createEventDispatcher`, `<slot>` for new components
-  (use `{#snippet}`/`{@render}`), svelte stores (`writable/derived`) - shared
+  (use `{#snippet}`/`{@render}`), svelte stores (`writable/derived`) — shared
   state lives in `.svelte.ts` modules with runes (see `web/src/lib/ws.svelte.ts`).
+- **No scoped CSS in page files.** Pages compose reusable components from
+  `web/src/lib/ui/` (Button, Card, Field, inputs, SaveBar, ImportButton, …);
+  styles live either in `src/app.css` (tokens + base elements + utilities) or
+  scoped inside the reusable component. If a UI element appears twice, it
+  becomes a component.
+- Component testability rule: event handlers are explicit props
+  (`onchange`, `onfile`), never rest-spread surprises.
 - `$app/state`, not `$app/stores`.
 - svelte-check (`npm run check`) must pass with **0 errors/warnings**.
 
@@ -128,11 +135,14 @@ Update `docs/protocols.md` + the Go structs + `make types` in the same PR.
 
 - `internal/server/dist/index.html` + `200.html` are committed placeholders by
   design (fresh-clone `go build` must embed *something*). Real web builds
-  overwrite them - **do not commit web build output** (`.gitignore` handles
+  overwrite them — **do not commit web build output** (`.gitignore` handles
   assets; if git tracks a rebuilt placeholder, restore it).
 - Windows + WinMM: a MIDI port can be opened by only one process at a time.
   If `show-mapper` can't see presses, close other tools (DawControl, DAWs, browsers).
-- RtMidi port enumeration is static - hot-plug shows up after the conductor's
+- RtMidi port enumeration is static — hot-plug shows up after the conductor's
   5 s reconnect cycle, not instantly.
-- No CGO on your machine? Everything except MIDI hardware works; tests/CI
-  default to `CGO_ENABLED=0`.
+- **No CGO on your machine? Everything still testable**: a built-in virtual
+  surface (source type `sim`) is playable in the browser on the **Surface**
+  tab and flows the real pipeline. For real hardware access during dev:
+  install MinGW-w64 (`choco install mingw` on Windows, gcc on Linux,
+  Xcode CLT on macOS) — `make run` then auto-switches to CGO builds.

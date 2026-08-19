@@ -49,9 +49,14 @@ contract; change code + types (`web/src/lib/types.ts`) + this doc together.
 
 ### Client → server
 
-Reserved namespace `client.*` (e.g. future `client.test-binding`,
-`client.led-test`). Currently ignored; the read loop exists to keep
-pings/pongs alive.
+Messages use the same Envelope. Implemented today:
+
+| type | data | effect |
+|---|---|---|
+| `client.sim` | `{source, control, kind: pressed\|released\|value, value}` | injects an event into a `sim` (virtual surface) source, flowing through normal dispatch |
+
+All other inbound types are reserved for the `client.*` namespace (e.g.
+feature `client.test-binding`, `client.led-test`); unknown types are ignored.
 
 ## Field/enum values
 

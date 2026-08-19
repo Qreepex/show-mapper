@@ -55,19 +55,22 @@ make build-nocgo  # fast path: binary without MIDI hardware support
 make build        # full binary with MIDI (needs gcc/clang; see docs/releasing.md)
 
 # dev loop with hot-reload UI:
-make run          # terminal 1: backend API+WS on :8080 (stub MIDI w/o CGO)
+make run          # terminal 1: backend :8080 (CGO auto-enabled when a C compiler is found;else the MIDI stub + virtual Surface)
 make web-dev      # terminal 2: vite dev server on :5173 (proxy /api,/ws)
 
 make check        # vet + unit tests + svelte-check + builds (same as CI)
 ```
 
+**No MIDI board or no C++ toolchain?** Add a source of type `sim` (Sources tab),
+open the **Surface** tab and click/drag through the whole event → binding → OSC
+pipeline in the browser.
 Handy: `show-mapper midi list`, `show-mapper midi monitor <device>`.
 
 ## Feature status
 
 | Area | Status |
 | --- | --- |
-| Sources | **MIDI** (APC mini mk2 verified protocol, APC mini community map, custom boards via config/UI) · Stream Deck (USB HID) planned next - see TODO.md |
+| Sources | **MIDI** (APC mini mk2 verified protocol, APC mini community map, custom boards via config/UI) · **`sim` virtual surface (in-browser board — no hardware/CGO needed)** · Stream Deck (USB HID) planned next - see TODO.md |
 | Triggers/Modes | pressed · released · hold (ms) · value · momentary · toggle (pad-LED feedback) |
 | Targets | **OSC/UDP** (generic module; per-instance NIC bind via `localAddress` — multiple NICs in parallel) · grandMA3 helper module with action presets (Go/GoBack/Pause/Flash/Temp/On/Off/Key/Fader) |
 | Realtime UI | WebSocket ticker + connector status; config hot-reload on UI save *and* disk edits |

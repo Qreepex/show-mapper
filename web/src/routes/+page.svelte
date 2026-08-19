@@ -1,22 +1,45 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { live } from "$lib/ws.svelte";
   import { api, ApiError } from "$lib/api";
-  import type { ConnectorState } from "$lib/types";
+  import Card from "$lib/ui/Card.svelte";
+  import Button from "$lib/ui/Button.svelte";
+  import StatusDot from "$lib/ui/StatusDot.svelte";
+  import Msg from "$lib/ui/Msg.svelte";
+  import PageHeader from "$lib/ui/PageHeader.svelte";
 
   let inspectResult = $state<string | null>(null);
   let updateBusy = $state(false);
   let updateMsg = $state<{ text: string; ok: boolean } | null>(null);
-  let updateLoaded = $state(false);
-  import { onMount } from "svelte";
 
   onMount(async () => {
     try {
       live.update = await api.updateStatus();
     } catch {
-      /* update check unavailable — fine */
+      /* updater not configured — fine */
     }
-    updateLoaded = true;
   });
+
+  async function listMidiPorts() {
+    inspectResult = "…";
+    try {
+      const res = await api.inspectSource("midi");
+      if (!res.ok) {
+        inspectResult = `MIDI unavailable: ${res.error}
+Tip: use the built-in virtual Surface tab while developing without a CGO build/board.`;
+        return;
+      }
+      const ins = res.result?.in ?? [];
+      const outs = res.result?.out ?? [];
+      inspectResult =
+        "MIDI inputs:\n" +
+        (ins.length ? ins.map((p) => `  [${p.number}] ${p.name}`).join("\n") : "  (none)") +
+        "\nMIDI outputs:\n" +
+        (outs.length ? outs.map((p) => `  [${p.number}] ${p.name}`).join("\n") : "  (none)");
+    } catch (e) {
+      inspectResult = String(e);
+    }
+  }
 
   async function checkUpdate() {
     updateBusy = true;
@@ -45,55 +68,35 @@
       updateBusy = false;
     }
   }
-
-  async function listMidiPorts() {
-    inspectResult = "…";
-    try {
-      const res = await api.inspectSource("midi");
-      if (!res.ok) {
-        inspectResult = `MIDI unavailable: ${res.error}`;
-        return;
-      }
-      const ins = res.result?.in ?? [];
-      const outs = res.result?.out ?? [];
-      inspectResult =
-        "MIDI inputs:\n" +
-        (ins.length ? ins.map((p) => `  [${p.number}] ${p.name}`).join("\n") : "  (none)") +
-        "\nMIDI outputs:\n" +
-        (outs.length ? outs.map((p) => `  [${p.number}] ${p.name}`).join("\n") : "  (none)");
-    } catch (e) {
-      inspectResult = String(e);
-    }
-  }
-
-  function stateClass(c: ConnectorState): string {
-    return c.status.state === "connected"
-      ? "connected"
-      : c.status.state === "error"
-        ? "error"
-        : c.status.state === "connecting"
-          ? "connecting"
-          : "disconnected";
-  }
 </script>
 
-<h1>Dashboard</h1>
+<PageHeader title="Dashboard" />
 
 {#if live.update?.available}
-  <div class="card update-banner">
-    <strong>⬆ Update available:</strong>
-    v{live.update.latestVersion}
-    <span class="muted">(running {live.update.current})</span>
-    <button class="primary" onclick={applyUpdate} disabled={updateBusy}>Download &amp; install</button>
-    <a href={live.update.latestURL} target="_blank" rel="noreferrer">release notes</a>
-  </div>
+  <Card>
+    <div class="row">
+      <strong>⬆ Update available: v{live.update.latestVersion}</strong>
+      <span class="muted">(running {live.update.current})</span>
+      <Button variant="primary" onclick={applyUpdate} disabled={updateBusy}>
+        Download &amp; install
+      </Button>
+      {#if live.update.latestURL}
+        <a href={live.update.latestURL} target="_blank" rel="noreferrer">release notes</a>
+      {/if}
+      <Msg msg={updateMsg} />
+    </div>
+  </Card>
 {/if}
 
-<div class="grid two">
-  <div class="card">
-    <h2>Connectors</h2>
+<div class="grid-two">
+  <Card title="Connectors">
     {#if live.connectors.length === 0}
-      <p class="muted">Waiting for backend state…</p>
+      <p class="muted">
+        No connectors configured yet — add some under
+        <a href="/sources">Sources</a> / <a href="/targets">Targets</a>.
+        Tip for development without hardware: add a <code>sim</code> source and play on the
+        <a href="/surface">Surface</a> tab.
+      </p>
     {:else}
       <table>
         <thead>
@@ -102,54 +105,53 @@
         <tbody>
           {#each live.connectors as c (c.kind + c.id)}
             <tr>
-              <td><span class="dot {stateClass(c)}"></span></td>
+              <td><StatusDot state={c.status.state} /></td>
               <td class="mono">{c.id}</td>
               <td class="muted">{c.kind}</td>
               <td class="muted">{c.type}</td>
               <td>
                 <span class="mono">{c.status.state}</span>
-                {#if c.status.detail}
-                  <br /><span class="muted">{c.status.detail}</span>
-                {/if}
+                {#if c.status.detail}<br /><span class="muted">{c.status.detail}</span>{/if}
               </td>
             </tr>
           {/each}
         </tbody>
       </table>
     {/if}
-  </div>
+  </Card>
 
-  <div class="card">
-    <h2>MIDI discovery</h2>
+  <Card title="MIDI discovery">
     <p class="muted">
       Lists OS MIDI ports as seen by this build. Use a unique substring as
-      <code>device</code> in a source's options. (Needs a CGO build — release binaries are.)
+      <code>device</code> in a source's options. (Needs a CGO build — release binaries have it;
+      during development without one, use the <a href="/surface">Surface</a> tab.)
     </p>
-    <button onclick={listMidiPorts}>List MIDI ports</button>
+    <Button onclick={listMidiPorts}>List MIDI ports</Button>
     {#if inspectResult}
       <pre class="mono">{inspectResult}</pre>
     {/if}
-  </div>
+  </Card>
 </div>
 
-<div class="card" style="margin-top:1rem">
-  <h2>Software update</h2>
+<Card title="Software update">
   <div class="row">
-    <button onclick={checkUpdate} disabled={updateBusy}>Check now</button>
-    {#if updateMsg}
-      <span class={updateMsg.ok ? "flash-ok" : "flash-err"}>{updateMsg.text}</span>
-    {:else if updateLoaded && live.update && !live.update.configured}
+    <Button onclick={checkUpdate} disabled={updateBusy}>Check now</Button>
+    <Msg msg={updateMsg} />
+    {#if live.update && !live.update.configured && !updateMsg}
       <span class="muted">
-        Not configured — set <code>updates.repo</code> (&quot;owner/repo&quot;) in Settings → Updates.
+        Not configured — set <code>updates.repo</code> (&quot;owner/repo&quot;) in
+        <a href="/settings">Settings</a>.
       </span>
     {/if}
   </div>
-</div>
+</Card>
 
-<div class="card" style="margin-top:1rem">
-  <h2>Live activity</h2>
+<Card title="Live activity">
   {#if live.ticker.length === 0}
-    <p class="muted">No events yet — press a button on your board.</p>
+    <p class="muted">
+      No events yet — press a button on your board or on the
+      <a href="/surface">Surface</a> tab.
+    </p>
   {:else}
     <table>
       <tbody>
@@ -171,17 +173,4 @@
       </tbody>
     </table>
   {/if}
-</div>
-
-<style>
-  .grid.two { grid-template-columns: 1fr 1fr; }
-  code { background: var(--panel-2); padding: 0 0.3em; border-radius: 0.3em; }
-  pre { white-space: pre-wrap; }
-  .update-banner {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    margin-bottom: 1rem;
-    border-color: var(--ok);
-  }
-</style>
+</Card>

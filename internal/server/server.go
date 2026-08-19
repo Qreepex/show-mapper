@@ -38,6 +38,7 @@ type Server struct {
 func New(cfgFile *config.File, cond *core.Conductor, hub *Hub) *Server {
 	s := &Server{cfgFile: cfgFile, cond: cond, hub: hub}
 	hub.SetSnapshot(s.snapshot)
+	hub.SetClientHandler(s.handleClientMessage)
 
 	cfg := cfgFile.Get()
 	mux := http.NewServeMux()
@@ -99,6 +100,55 @@ func (s *Server) snapshot() Envelope {
 			Config:     s.cfgFile.Get(),
 		},
 	}
+}
+
+// ---------------------------------------------------------------------------
+// inbound client.* messages (web UI → backend), see docs/protocols.md
+// ---------------------------------------------------------------------------
+
+func (s *Server) handleClientMessage(env Envelope) {
+	switch env.Type {
+	case "client.sim":
+		var m struct {
+			Source  string  `json:"source"`
+			Control string  `json:"control"`
+			Kind    string  `json:"kind"`
+			Value   float64 `json:"value"`
+		}
+		if err := remarshal(env.Data, &m); err != nil {
+			slog.Debug("client.sim: bad payload")
+			return
+		}
+		var kind core.EventKind
+		switch m.Kind {
+		case "pressed":
+			kind = core.EventPressed
+		case "released":
+			kind = core.EventReleased
+		case "value":
+			kind = core.EventValue
+		default:
+			slog.Debug("client.sim: unknown kind", "kind", m.Kind)
+			return
+		}
+		if err := s.cond.InjectEvent(m.Source, core.Event{
+			Control: m.Control,
+			Kind:    kind,
+			Value:   m.Value,
+			When:    time.Now(),
+		}); err != nil {
+			slog.Debug("client.sim: inject failed", "err", err)
+		}
+	}
+}
+
+// remarshal converts the loosely-typed Envelope.Data into a typed struct.
+func remarshal(from any, into any) error {
+	raw, err := json.Marshal(from)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, into)
 }
 
 // ---------------------------------------------------------------------------

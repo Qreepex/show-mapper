@@ -156,6 +156,12 @@ export type Source = any;
  */
 export type Target = any;
 /**
+ * EventInjector is an optional interface for VIRTUAL sources (no hardware):
+ * it accepts events programmatically, e.g. the in-browser virtual surface
+ * (source type "sim") fed by the web UI via WS.
+ */
+export type EventInjector = any;
+/**
  * FeedbackSink is an optional interface for sources that can update the
  * visuals of their physical controls: LEDs on MIDI pads/buttons today,
  * LCD key images/labels on Elgato Stream Decks next, etc.

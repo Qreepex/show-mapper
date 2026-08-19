@@ -1,341 +1,244 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, ApiError } from "$lib/api";
-  import type {
-    ActionType,
-    Binding,
-    Config,
-    Meta,
-    Mode,
-    Trigger,
-  } from "$lib/types";
+  import { ConfigDraft } from "$lib/draft.svelte";
+  import type { ActionType, Binding, Mode, Trigger } from "$lib/types";
+  import Card from "$lib/ui/Card.svelte";
+  import PageHeader from "$lib/ui/PageHeader.svelte";
+  import Button from "$lib/ui/Button.svelte";
+  import LinkButton from "$lib/ui/LinkButton.svelte";
+  import ImportButton from "$lib/ui/ImportButton.svelte";
+  import SaveBar from "$lib/ui/SaveBar.svelte";
+  import Field from "$lib/ui/Field.svelte";
+  import TextInput from "$lib/ui/TextInput.svelte";
+  import NumberInput from "$lib/ui/NumberInput.svelte";
+  import SelectInput from "$lib/ui/SelectInput.svelte";
+  import EmptyState from "$lib/ui/EmptyState.svelte";
+  import Msg from "$lib/ui/Msg.svelte";
 
-  let meta = $state<Meta | null>(null);
-  let cfg = $state<Config | null>(null);
-  let draft = $state<Binding[]>([]);
-  let saveMsg = $state<{ text: string; ok: boolean } | null>(null);
+  const d = new ConfigDraft();
+  onMount(() => d.init());
 
-  // Per-row preset selection + params (helper-module sugar, e.g. "gma3.go").
   let presetSel = $state<Record<number, { id: string; params: Record<string, string> }>>({});
   let presetMsg = $state<{ row: number; text: string; ok: boolean } | null>(null);
-  let impEl = $state<HTMLInputElement>() as HTMLInputElement;
 
-  async function importBindings(e: Event) {
-    const file = (e.currentTarget as HTMLInputElement).files?.[0];
-    saveMsg = null;
-    if (!file) return;
-    try {
-      await api.importSection(file);
-      cfg = await api.config();
-      draft = structuredClone(cfg.bindings ?? []);
-      saveMsg = { text: "Bindings imported (upserted by id).", ok: true };
-    } catch (err) {
-      saveMsg = { text: err instanceof ApiError ? err.errors.join("\n") : String(err), ok: false };
-    } finally {
-      if (impEl) impEl.value = "";
-    }
+  function bindings(): Binding[] {
+    return d.cfg?.bindings ?? [];
   }
 
-  onMount(async () => {
-    [meta, cfg] = await Promise.all([api.meta(), api.config()]);
-    draft = structuredClone(cfg.bindings ?? []);
-  });
-
-  // All controls a source offers = its profile's controls (built-in or custom).
   function controlsFor(sourceId: string): { id: string; label: string }[] {
-    if (!cfg || !meta) return [];
-    const src = cfg.sources.find((s) => s.id === sourceId);
+    if (!d.cfg || !d.meta) return [];
+    const src = d.cfg.sources.find((s) => s.id === sourceId);
     if (!src) return [];
-    const builtin = meta.sourceTypes
+    const builtin = d.meta.sourceTypes
       .find((t) => t.type === src.type)
       ?.profiles?.find((p) => p.id === src.profile);
     if (builtin) return builtin.controls.map((c) => ({ id: c.id, label: c.label }));
-    const custom = (cfg.profiles ?? [])
+    const customs = (d.cfg.profiles ?? [])
       .filter((p) => p.type === src.type && p.id === src.profile)
       .flatMap((p) => p.controls);
-    return custom.map((c) => ({ id: c.id, label: c.label }));
+    return customs.map((c) => ({ id: c.id, label: c.label }));
   }
 
   function addBinding() {
-    if (!cfg) return;
-    draft.push({
-      source: cfg.sources[0]?.id ?? "",
+    if (!d.cfg) return;
+    d.cfg.bindings.push({
+      source: d.cfg.sources[0]?.id ?? "",
       control: "",
       trigger: "pressed",
       mode: "momentary",
-      target: cfg.targets[0]?.id ?? "",
+      target: d.cfg.targets[0]?.id ?? "",
       action: { type: "command", address: "/cmd", command: "", valueType: "int" },
       led: { color: "green", mode: "on" },
     });
   }
 
-  function removeBinding(i: number) {
-    draft.splice(i, 1);
-    presetMsg = null;
-  }
-
-  // ---- presets ------------------------------------------------------------
+  // ---- presets (helper modules, e.g. gma3.*) ------------------------------
 
   function presetOf(i: number) {
     if (!presetSel[i]) presetSel[i] = { id: "", params: {} };
     return presetSel[i];
   }
-  function presetMeta(id: string) {
-    return meta?.presets.find((p) => p.id === id);
+  function presetMetaOf(id: string) {
+    return d.meta?.presets.find((p) => p.id === id);
   }
   async function applyPreset(i: number) {
     const sel = presetOf(i);
-    if (!sel.id) return;
+    if (!sel.id || !d.cfg) return;
     presetMsg = null;
     try {
-      draft[i].action = await api.resolvePreset(sel.id, sel.params);
+      d.cfg.bindings[i].action = await api.resolvePreset(sel.id, sel.params);
       presetMsg = { row: i, text: `Preset ${sel.id} applied.`, ok: true };
     } catch (e) {
       presetMsg = { row: i, text: e instanceof ApiError ? e.errors.join("; ") : String(e), ok: false };
     }
   }
 
-  async function save() {
-    if (!cfg) return;
-    saveMsg = null;
-    try {
-      await api.saveConfig({ ...cfg, bindings: draft });
-      saveMsg = { text: "Saved — connectors reloaded.", ok: true };
-      cfg = await api.config(); // backend may have normalized fields
-      draft = structuredClone(cfg.bindings ?? []);
-    } catch (e) {
-      saveMsg = {
-        text: e instanceof ApiError ? e.errors.join("\n") : String(e),
-        ok: false,
-      };
-    }
+  const LED_COLORS = ["green", "red", "orange", "yellow", "cyan", "blue", "purple", "pink", "white"];
+  const LED_MODES = ["on", "blink", "pulse"];
+
+  function numdef(v: unknown): number {
+    return typeof v === "number" ? v : 0;
   }
 </script>
 
-<h1>Mappings</h1>
+<PageHeader title="Mappings">
+  <LinkButton href={api.exportSectionURL("bindings")} download="show-mapper-bindings.yaml">⭳ Export</LinkButton>
+  <ImportButton onfile={(f) => d.importSection(f)} />
+</PageHeader>
 
-{#if !cfg || !meta}
+{#if !d.cfg || !d.meta}
   <p class="muted">Loading…</p>
 {:else}
-  {#if cfg.sources.length === 0 || cfg.targets.length === 0}
-    <div class="card">
+  <SaveBar onsave={() => d.save()} msg={d.msg}>
+    <Button onclick={addBinding}>+ Add binding</Button>
+  </SaveBar>
+
+  {#if d.cfg.sources.length === 0 || d.cfg.targets.length === 0}
+    <EmptyState>
       <p>
-        You need at least one <a href="/settings">source and one target</a> before
-        configuring mappings.
+        You need at least one <a href="/sources">source</a> and one
+        <a href="/targets">target</a> first.
       </p>
-    </div>
-  {:else}
-    <div class="row" style="margin-bottom: 1rem">
-      <button class="primary" onclick={addBinding}>+ Add binding</button>
-      <button onclick={save}>Save &amp; apply</button>
-      <a class="btnlike" href={api.exportSectionURL("bindings")} download="show-mapper-bindings.yaml">⭳ Export</a>
-      <button onclick={() => impEl.click()}>⭱ Import…</button>
-      <input bind:this={impEl} type="file" accept=".yaml,.yml" hidden onchange={importBindings} />
-      {#if saveMsg}
-        <span class={saveMsg.ok ? "flash-ok" : "flash-err"}>{saveMsg.text}</span>
-      {/if}
-    </div>
-
-    {#if draft.length === 0}
-      <p class="muted">No bindings yet. Tip: use the Dashboard ticker to find control IDs (like <code>pad-0-0</code> or <code>note:36</code>) while pressing buttons.</p>
-    {/if}
-
-    {#each draft as b, i (i)}
-      {@const sel = presetOf(i)}
-      {@const pm = presetMeta(sel.id)}
-      <div class="card bind">
-        <div class="rowline">
-          <div>
-            <label for={"src-" + i}>Source</label>
-            <select id={"src-" + i} value={b.source} onchange={(e) => { b.source = e.currentTarget.value; }}>
-              {#each cfg.sources as s (s.id)}
-                <option value={s.id}>{s.id} ({s.type}{s.profile ? ":" + s.profile : ""})</option>
-              {/each}
-            </select>
-          </div>
-          <div>
-            <label for={"ctrl-" + i}>Control</label>
-            <input id={"ctrl-" + i} list={"ctrllist-" + i} placeholder="pad-0-0 …" value={b.control}
-              oninput={(e) => { b.control = e.currentTarget.value; }} />
-            <datalist id={"ctrllist-" + i}>
-              {#each controlsFor(b.source) as c (c.id)}
-                <option value={c.id}>{c.label}</option>
-              {/each}
-            </datalist>
-          </div>
-          <div>
-            <label for={"trig-" + i}>Trigger</label>
-            <select id={"trig-" + i} value={b.trigger}
-              onchange={(e) => { b.trigger = e.currentTarget.value as Trigger; }}>
-              {#each meta.triggers as t (t)}
-                <option value={t}>{t}</option>
-              {/each}
-            </select>
-          </div>
-          {#if b.trigger === "hold"}
-            <div>
-              <label for={"hold-" + i}>Hold (ms)</label>
-              <input id={"hold-" + i} type="number" min="0" max="60000" value={b.holdMs ?? 500}
-                oninput={(e) => { b.holdMs = Number(e.currentTarget.value); }} />
-            </div>
-          {/if}
-          <div>
-            <label for={"mode-" + i}>Mode</label>
-            <select id={"mode-" + i} value={b.mode ?? "momentary"}
-              onchange={(e) => { b.mode = e.currentTarget.value as Mode; }}>
-              {#each meta.modes as m (m)}
-                <option value={m}>{m}</option>
-              {/each}
-            </select>
-          </div>
-          <div>
-            <label for={"tgt-" + i}>Target</label>
-            <select id={"tgt-" + i} value={b.target}
-              onchange={(e) => { b.target = e.currentTarget.value; }}>
-              {#each cfg.targets as t (t.id)}
-                <option value={t.id}>{t.id} ({t.type})</option>
-              {/each}
-            </select>
-          </div>
-          <button class="danger del" title="Remove binding" onclick={() => removeBinding(i)}>✕</button>
-        </div>
-
-        {#if meta.presets.length > 0}
-          <div class="rowline presetline">
-            <div>
-              <label for={"preset-" + i}>Preset (optional)</label>
-              <select id={"preset-" + i} value={sel.id}
-                onchange={(e) => { sel.id = e.currentTarget.value; }}>
-                <option value="">— fill action manually below —</option>
-                {#each meta.presets as p (p.id)}
-                  <option value={p.id}>{p.label}</option>
-                {/each}
-              </select>
-            </div>
-            {#if pm}
-              {#each pm.fields as f (f.name)}
-                <div>
-                  <label for={"preset-" + i + "-" + f.name}>{f.label}</label>
-                  <input id={"preset-" + i + "-" + f.name} type={f.type === "number" ? "number" : "text"}
-                    placeholder={f.help ?? ""}
-                    value={sel.params[f.name] ?? String(f.default ?? "")}
-                    oninput={(e) => { sel.params[f.name] = e.currentTarget.value; }} />
-                </div>
-              {/each}
-              <div class="spacer">
-                <button onclick={() => applyPreset(i)}>Apply preset ↓</button>
-              </div>
-            {/if}
-          </div>
-          {#if pm?.help}
-            <p class="muted preset-help">{pm.help}</p>
-          {/if}
-          {#if presetMsg && presetMsg.row === i}
-            <p class={presetMsg.ok ? "flash-ok" : "flash-err"}>{presetMsg.text}</p>
-          {/if}
-        {/if}
-
-        <div class="rowline">
-          <div>
-            <label for={"atype-" + i}>Action</label>
-            <select id={"atype-" + i} value={b.action.type}
-              onchange={(e) => { b.action.type = e.currentTarget.value as ActionType; }}>
-              {#each meta.actionTypes as a (a)}
-                <option value={a}>{a}</option>
-              {/each}
-            </select>
-          </div>
-          <div class="grow">
-            <label for={"addr-" + i}>Address (e.g. /cmd, /Page1/Fader201, /Page1/Key201)</label>
-            <input id={"addr-" + i} class="grow mono" value={b.action.address} style="width:100%"
-              oninput={(e) => { b.action.address = e.currentTarget.value; }} />
-          </div>
-          <div>
-            <label for={"vt-" + i}>Value type</label>
-            <select id={"vt-" + i} value={b.action.valueType ?? "int"}
-              onchange={(e) => { b.action.valueType = e.currentTarget.value as "int" | "float"; }}>
-              <option value="int">int</option>
-              <option value="float">float</option>
-            </select>
-          </div>
-        </div>
-
-        {#if b.action.type === "command"}
-          <div class="rowline">
-            <div class="grow">
-              <label for={"cmd-" + i}>Command (on press)</label>
-              <input id={"cmd-" + i} class="mono" style="width:100%" placeholder="Go Executor 1.201"
-                value={b.action.command ?? ""}
-                oninput={(e) => { b.action.command = e.currentTarget.value; }} />
-            </div>
-            <div class="grow">
-              <label for={"rcmd-" + i}>Command (on release, optional)</label>
-              <input id={"rcmd-" + i} class="mono" style="width:100%"
-                value={b.action.releaseCommand ?? ""}
-                oninput={(e) => { b.action.releaseCommand = e.currentTarget.value; }} />
-            </div>
-          </div>
-        {:else if b.action.type === "value"}
-          <div class="rowline">
-            <div>
-              <label for={"pv-" + i}>Press value</label>
-              <input id={"pv-" + i} type="number" step="any" value={b.action.pressValue ?? 1}
-                oninput={(e) => { b.action.pressValue = Number(e.currentTarget.value); }} />
-            </div>
-            <div>
-              <label for={"rv-" + i}>Release value</label>
-              <input id={"rv-" + i} type="number" step="any" value={b.action.releaseValue ?? 0}
-                oninput={(e) => { b.action.releaseValue = Number(e.currentTarget.value); }} />
-            </div>
-          </div>
-        {:else if b.action.type === "fader"}
-          <div class="rowline">
-            <div>
-              <label for={"rmin-" + i}>Range min</label>
-              <input id={"rmin-" + i} type="number" step="any" value={b.action.range?.[0] ?? 0}
-                oninput={(e) => { b.action.range = [Number(e.currentTarget.value), b.action.range?.[1] ?? 100]; }} />
-            </div>
-            <div>
-              <label for={"rmax-" + i}>Range max</label>
-              <input id={"rmax-" + i} type="number" step="any" value={b.action.range?.[1] ?? 100}
-                oninput={(e) => { b.action.range = [b.action.range?.[0] ?? 0, Number(e.currentTarget.value)]; }} />
-            </div>
-          </div>
-        {/if}
-
-        {#if b.mode === "toggle"}
-          <div class="rowline">
-            <div>
-              <label for={"ledc-" + i}>LED color (toggle)</label>
-              <select id={"ledc-" + i} value={b.led?.color ?? "green"}
-                onchange={(e) => { b.led = { ...b.led, color: e.currentTarget.value }; }}>
-                {#each ["green", "red", "orange", "yellow", "cyan", "blue", "purple", "pink", "white"] as c (c)}
-                  <option value={c}>{c}</option>
-                {/each}
-              </select>
-            </div>
-            <div>
-              <label for={"ledm-" + i}>LED mode</label>
-              <select id={"ledm-" + i} value={b.led?.mode ?? "on"}
-                onchange={(e) => { b.led = { ...b.led, mode: e.currentTarget.value }; }}>
-                {#each ["on", "blink", "pulse"] as m (m)}
-                  <option value={m}>{m}</option>
-                {/each}
-              </select>
-            </div>
-          </div>
-        {/if}
-      </div>
-    {/each}
+    </EmptyState>
+  {:else if bindings().length === 0}
+    <EmptyState>
+      <p>No bindings yet. Press buttons on your board while watching the Dashboard ticker to discover control IDs (<code>pad-0-0</code>, <code>note:36</code>…).</p>
+      <Button variant="primary" onclick={addBinding}>+ Add your first binding</Button>
+    </EmptyState>
   {/if}
-{/if}
 
-<style>
-  .bind { margin-bottom: 0.8rem; }
-  .rowline { display: flex; gap: 0.8rem; align-items: flex-end; margin-bottom: 0.6rem; flex-wrap: wrap; }
-  .grow { flex: 1; min-width: 200px; }
-  .del { margin-left: auto; }
-  .presetline { background: rgba(127, 212, 255, 0.04); padding: 0.5rem; border-radius: 0.4rem; }
-  .presetline .spacer { align-self: flex-end; }
-  .preset-help { margin: -0.3rem 0 0.6rem; font-size: 0.8rem; }
-</style>
+  {#each bindings() as b, i (i)}
+    {@const sel = presetOf(i)}
+    <Card title={`${b.source}:${b.control || "?"} → ${b.target}`}>
+      {#snippet actions()}
+        <Button variant="danger" onclick={() => d.cfg && d.cfg.bindings.splice(i, 1)}>✕ remove</Button>
+      {/snippet}
+
+      <div class="rowline">
+        <Field label="Source">
+          <SelectInput value={b.source} options={d.cfg.sources.map((s) => s.id)}
+            onchange={(e: Event) => { b.source = (e.currentTarget as HTMLSelectElement).value; }} />
+        </Field>
+        <Field label="Control (pick or type raw)">
+          <TextInput mono list={`ctrllist-${i}`} value={b.control} placeholder="pad-0-0 …"
+            oninput={(e: Event) => { b.control = (e.currentTarget as HTMLInputElement).value; }} />
+          <datalist id={`ctrllist-${i}`}>
+            {#each controlsFor(b.source) as c (c.id)}
+              <option value={c.id}>{c.label}</option>
+            {/each}
+          </datalist>
+        </Field>
+        <Field label="Trigger">
+          <SelectInput value={b.trigger} options={d.meta.triggers}
+            onchange={(e: Event) => { b.trigger = (e.currentTarget as HTMLSelectElement).value as Trigger; }} />
+        </Field>
+        {#if b.trigger === "hold"}
+          <Field label="Hold (ms)">
+            <NumberInput min={0} max={60000} value={b.holdMs ?? 500}
+              oninput={(e: Event) => { b.holdMs = Number((e.currentTarget as HTMLInputElement).value); }} />
+          </Field>
+        {/if}
+        <Field label="Mode">
+          <SelectInput value={b.mode ?? "momentary"} options={d.meta.modes}
+            onchange={(e: Event) => { b.mode = (e.currentTarget as HTMLSelectElement).value as Mode; }} />
+        </Field>
+        <Field label="Target">
+          <SelectInput value={b.target} options={d.cfg.targets.map((t) => t.id)}
+            onchange={(e: Event) => { b.target = (e.currentTarget as HTMLSelectElement).value; }} />
+        </Field>
+      </div>
+
+      {#if d.meta.presets.length > 0}
+        <div class="rowline">
+          <Field label="Preset (helper)">
+            <SelectInput value={sel.id} options={["", ...d.meta.presets.map((p) => p.id)]}
+              onchange={(e: Event) => { sel.id = (e.currentTarget as HTMLSelectElement).value; }} />
+          </Field>
+          {#if presetMetaOf(sel.id)}
+            {#each presetMetaOf(sel.id)!.fields as f (f.name)}
+              <Field label={f.label} hint={f.help}>
+                {#if f.type === "number"}
+                  <NumberInput value={Number(sel.params[f.name] ?? numdef(f.default))}
+                    oninput={(e: Event) => { sel.params[f.name] = (e.currentTarget as HTMLInputElement).value; }} />
+                {:else}
+                  <TextInput value={sel.params[f.name] ?? String(f.default ?? "")}
+                    oninput={(e: Event) => { sel.params[f.name] = (e.currentTarget as HTMLInputElement).value; }} />
+                {/if}
+              </Field>
+            {/each}
+            <Field label="">
+              <Button onclick={() => applyPreset(i)}>Apply preset ↓</Button>
+            </Field>
+          {/if}
+        </div>
+        {#if presetMsg && presetMsg.row === i}
+          <Msg msg={{ text: presetMsg.text, ok: presetMsg.ok }} />
+        {/if}
+      {/if}
+
+      <div class="rowline">
+        <Field label="Action type">
+          <SelectInput value={b.action.type} options={d.meta.actionTypes}
+            onchange={(e: Event) => { b.action.type = (e.currentTarget as HTMLSelectElement).value as ActionType; }} />
+        </Field>
+        <Field label="Address" grow>
+          <TextInput mono value={b.action.address} placeholder="/cmd, /Page1/Fader201, …"
+            oninput={(e: Event) => { b.action.address = (e.currentTarget as HTMLInputElement).value; }} />
+        </Field>
+        <Field label="Value type">
+          <SelectInput value={b.action.valueType ?? "int"} options={["int", "float"]}
+            onchange={(e: Event) => { b.action.valueType = (e.currentTarget as HTMLSelectElement).value as "int" | "float"; }} />
+        </Field>
+      </div>
+
+      {#if b.action.type === "command"}
+        <div class="rowline">
+          <Field label="Command (on press)" grow>
+            <TextInput mono value={b.action.command ?? ""} placeholder="Go Executor 1.201"
+              oninput={(e: Event) => { b.action.command = (e.currentTarget as HTMLInputElement).value; }} />
+          </Field>
+          <Field label="Command (on release, optional)" grow>
+            <TextInput mono value={b.action.releaseCommand ?? ""}
+              oninput={(e: Event) => { b.action.releaseCommand = (e.currentTarget as HTMLInputElement).value; }} />
+          </Field>
+        </div>
+      {:else if b.action.type === "value"}
+        <div class="rowline">
+          <Field label="Press value">
+            <NumberInput value={b.action.pressValue ?? 1}
+              oninput={(e: Event) => { b.action.pressValue = Number((e.currentTarget as HTMLInputElement).value); }} />
+          </Field>
+          <Field label="Release value">
+            <NumberInput value={b.action.releaseValue ?? 0}
+              oninput={(e: Event) => { b.action.releaseValue = Number((e.currentTarget as HTMLInputElement).value); }} />
+          </Field>
+        </div>
+      {:else if b.action.type === "fader"}
+        <div class="rowline">
+          <Field label="Range min">
+            <NumberInput value={b.action.range?.[0] ?? 0}
+              oninput={(e: Event) => { b.action.range = [Number((e.currentTarget as HTMLInputElement).value), b.action.range?.[1] ?? 100]; }} />
+          </Field>
+          <Field label="Range max">
+            <NumberInput value={b.action.range?.[1] ?? 100}
+              oninput={(e: Event) => { b.action.range = [b.action.range?.[0] ?? 0, Number((e.currentTarget as HTMLInputElement).value)]; }} />
+          </Field>
+        </div>
+      {/if}
+
+      {#if b.mode === "toggle"}
+        <div class="rowline">
+          <Field label="LED color (toggle)">
+            <SelectInput value={b.led?.color ?? "green"} options={LED_COLORS}
+              onchange={(e: Event) => { b.led = { ...b.led, color: (e.currentTarget as HTMLSelectElement).value }; }} />
+          </Field>
+          <Field label="LED mode">
+            <SelectInput value={b.led?.mode ?? "on"} options={LED_MODES}
+              onchange={(e: Event) => { b.led = { ...b.led, mode: (e.currentTarget as HTMLSelectElement).value }; }} />
+          </Field>
+        </div>
+      {/if}
+    </Card>
+  {/each}
+{/if}

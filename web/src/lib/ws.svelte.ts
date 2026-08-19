@@ -90,6 +90,16 @@ class Live {
     this.#socket?.close();
   }
 
+  /** Send an app-level client message (docs/protocols.md, client.* namespace). */
+  send(type: string, data: unknown) {
+    if (!type.startsWith("client.")) {
+      console.warn(`refusing to send non-client message type ${type}`);
+      return;
+    }
+    if (this.#socket?.readyState !== WebSocket.OPEN) return; // ticker shows reconnect anyway
+    this.#socket.send(JSON.stringify({ type, ts: new Date().toISOString(), data }));
+  }
+
   #scheduleReconnect() {
     this.#retries++;
     const delay = Math.min(5000, 500 * this.#retries);

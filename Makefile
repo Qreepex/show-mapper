@@ -32,9 +32,17 @@ build-nocgo:
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/show-mapper
 	@echo "built $(BIN) ($(VERSION), no MIDI)"
 
-## run: run backend (serves API+UI on :8080); placeholder UI until `make web`
+## run: run backend (serves API+UI on :8080). Uses CGO (real MIDI) when a C
+## compiler is available, otherwise the stub + virtual Surface for development.
 run:
-	CGO_ENABLED=0 go run ./cmd/show-mapper serve
+	@if command -v gcc >/dev/null 2>&1 || command -v cc >/dev/null 2>&1 || command -v clang >/dev/null 2>&1; then \
+		echo "C compiler found → MIDI enabled (CGO_ENABLED=1)"; \
+		CGO_ENABLED=1 go run ./cmd/show-mapper serve; \
+	else \
+		echo "no C compiler found → building WITHOUT MIDI hardware support"; \
+		echo "  → use the built-in virtual surface: http://127.0.0.1:8080/surface"; \
+		CGO_ENABLED=0 go run ./cmd/show-mapper serve; \
+	fi
 
 ## web: build SPA into internal/server/dist (embedded by go build)
 web:

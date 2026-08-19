@@ -31,6 +31,7 @@ import (
 	// Connectors register themselves via init(). Add future ones here
 	// (internal/sources/streamdeck, internal/targets/artnet, ...).
 	"github.com/Qreepex/show-mapper/internal/sources/midi"
+	_ "github.com/Qreepex/show-mapper/internal/sources/sim"
 	_ "github.com/Qreepex/show-mapper/internal/targets/osc"
 
 	// Helper modules (action presets etc.) — each is self-contained with its
