@@ -182,13 +182,13 @@
       </div>
 
       {#if tpres.length > 0}
-        <!-- target has helper actions (e.g. grandMA3): friendly form -->
+        <!-- target with helper actions (e.g. grandMA3): ONLY the functions form -->
         <div class="rowline">
-          <Field label="Action">
+          <Field label="Action (grandMA3)">
             <SelectInput
               value={b.action.type === "preset" ? b.action.preset ?? "" : ""}
-              options={["", ...tpres.map((p) => ({ value: p.id, label: p.label }))]}
-              allowEmpty="— generic / raw OSC —"
+              options={tpres.map((p) => ({ value: p.id, label: p.label }))}
+              allowEmpty="— pick a function —"
               onchange={(e: Event) => setActionMode(b, (e.currentTarget as HTMLSelectElement).value)}
             />
           </Field>
@@ -215,11 +215,15 @@
         </div>
         {#if b.action.type === "preset" && presetById(b.action.preset ?? "")?.help}
           <p class="muted">{presetById(b.action.preset ?? "")?.help}</p>
+        {:else if b.action.type !== "preset"}
+          <p class="muted">
+            This binding uses a raw action against a grandMA3 target — pick a grandMA3 function above.
+          </p>
         {/if}
       {/if}
 
-      {#if !(tpres.length > 0 && b.action.type === "preset")}
-        <!-- generic / raw action form -->
+      {#if tpres.length === 0}
+        <!-- generic / raw action form (targets without helper functions) -->
         <div class="rowline">
           <Field label="Action type">
             <SelectInput value={b.action.type} options={d.meta.actionTypes.filter((t) => t !== "preset")}
@@ -270,7 +274,6 @@
           </div>
         {/if}
       {/if}
-
       {#if b.mode === "toggle"}
         <div class="rowline">
           <Field label="LED color (toggle)">

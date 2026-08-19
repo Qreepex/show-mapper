@@ -43,6 +43,9 @@
 </script>
 
 <PageHeader title="Boards (custom profiles)">
+  <Button variant="primary" onclick={() => d.cfg && (d.cfg.profiles = [...(d.cfg.profiles ?? []), newProfile()])}>
+    + Add board
+  </Button>
   <LinkButton href={api.exportSectionURL("profiles")} download="show-mapper-profiles.yaml">
     ⭳ Export boards
   </LinkButton>

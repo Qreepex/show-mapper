@@ -56,6 +56,7 @@
 </script>
 
 <PageHeader title="Targets">
+  <Button variant="primary" onclick={addTarget}>+ Add target</Button>
   <LinkButton href={api.exportSectionURL("targets")} download="show-mapper-targets.yaml">
     ⭳ Export
   </LinkButton>

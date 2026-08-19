@@ -52,6 +52,7 @@
 </script>
 
 <PageHeader title="Sources">
+  <Button variant="primary" onclick={addSource}>+ Add source</Button>
   <LinkButton href={api.exportSectionURL("sources")} download="show-mapper-sources.yaml">
     ⭳ Export
   </LinkButton>
