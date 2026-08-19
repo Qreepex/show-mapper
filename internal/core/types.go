@@ -58,7 +58,7 @@ type Action struct {
 	Kind      ActionKind `json:"kind"`
 	Address   string     `json:"address"` // e.g. OSC address "/Page1/Fader201" / "/cmd"
 	// Args holds the resolved payload:
-	//   command: []any{string}            — e.g. "Go Executor 1.201"  (sent as OSC string)
+	//   command: []any{string}            — e.g. "Go+ Page 1.201"  (sent as OSC string)
 	//   value:   []any{int32|float32}
 	//   fader:   []any{int32|float32}     — source value scaled into the configured range
 	Args []any `json:"args"`

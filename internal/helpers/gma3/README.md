@@ -22,7 +22,7 @@ core stays console-agnostic and the binary works with or without this module.
    - **Mode:** UDP · **Port:** e.g. `8000` — must match the target's
      `options.port` (MA3 uses one port for send AND receive per row).
    - **Receive:** Yes · **Receive Command:** Yes (needed for all keyword
-     presets: go/goback/pause/flash/temp/on/off/cmd — everything via /cmd).
+     presets: go/goback/pause/temp/on/off/flash/cmd — everything via /cmd).
    - **Prefix** (optional): token like `lights` — must equal `options.prefix`.
    - Address tokens Page/Fader/ExecutorKnob/Key defaults are used by the
      presets (case-sensitive). **FaderRange** maps the fader preset's range
@@ -33,7 +33,8 @@ core stays console-agnostic and the binary works with or without this module.
 
 | preset | OSC message |
 |---|---|
-| `gma3.go` / `goback` / `pause` / `flash` / `temp` / `on` / `off` | `/cmd` + string, e.g. `GoBack Executor 1.201` |
+| `gma3.go` / `goback` / `pause` / `temp` / `on` / `off` | `/cmd` + string, e.g. `Go+ Page 1.201` |
+| `gma3.flash` (momentary) | `/cmd` + string, `Flash On Page 1.201` (press) / `Flash Off Page 1.201` (release) |
 | `gma3.cmd` | `/cmd` + your keyword line |
 | `gma3.key` (toggle/momentary) | `/Page<P>/Key<E>` int 1 (press) / 0 (release) |
 | `gma3.fader` | `/Page<P>/Fader<E>` int mapped through `range` (default 0..100) |

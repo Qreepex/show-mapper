@@ -24,10 +24,9 @@ func init() {
 	keywordFields := []core.FieldSpec{fieldPage, fieldExecutor}
 	for _, p := range []struct{ id, label, help, keyword string }{
 		{"gma3.cmd", "grandMA3: keyword command (/cmd)", "Runs any grandMA3 keyword via OSC /cmd (console needs 'Receive Command' enabled on the OSC row).", ""},
-		{"gma3.go", "grandMA3: Go", "", "Go"},
-		{"gma3.goback", "grandMA3: GoBack (Go-)", "", "GoBack"},
+		{"gma3.go", "grandMA3: Go+", "", "Go+"},
+		{"gma3.goback", "grandMA3: Go- (GoBack)", "", "Go-"},
 		{"gma3.pause", "grandMA3: Pause", "", "Pause"},
-		{"gma3.flash", "grandMA3: Flash (momentary)", "", "Flash"},
 		{"gma3.temp", "grandMA3: Temp", "", "Temp"},
 		{"gma3.on", "grandMA3: On", "", "On"},
 		{"gma3.off", "grandMA3: Off", "", "Off"},
@@ -39,7 +38,7 @@ func init() {
 		}
 		help := p.help
 		if help == "" {
-			help = fmt.Sprintf("%s Executor — sent as %q targeting page.executor.", p.label, p.keyword)
+			help = fmt.Sprintf("%s — OSC /cmd %q Page <page>.<executor>.", p.label, p.keyword)
 		}
 		core.RegisterActionPreset(core.ActionPreset{
 			ID: p.id, Source: targetGMA3, Label: p.label, Help: help,
@@ -51,6 +50,14 @@ func init() {
 			return keywordPreset(p.keyword, params)
 		})
 	}
+
+	// Flash needs separate On/Off commands for press/release.
+	core.RegisterActionPreset(core.ActionPreset{
+		ID: "gma3.flash", Source: targetGMA3, Label: "grandMA3: Flash (momentary)",
+		Help:        "Flash On (press) / Flash Off (release) — OSC /cmd \"Flash On Page <page>.<executor>\".",
+		Fields:      keywordFields,
+		TargetTypes: []string{targetGMA3},
+	}, flashPreset)
 
 	core.RegisterActionPreset(core.ActionPreset{
 		ID: "gma3.key", Source: targetGMA3, Label: "grandMA3: executor key (press/release)",
@@ -78,7 +85,7 @@ var (
 	}
 	fieldCommand = core.FieldSpec{
 		Name: "command", Label: "Command", Type: "text", Required: true,
-		Help: "grandMA3 keyword line, e.g. \"Go Executor 1.201\".",
+		Help: "grandMA3 keyword line, e.g. \"Go+ Page 1.201\".",
 	}
 	fieldMin = core.FieldSpec{
 		Name: "min", Label: "Range min", Type: "number", Default: 0,
@@ -107,7 +114,21 @@ func keywordPreset(keyword string, params map[string]any) (config.ActionConfig, 
 	return config.ActionConfig{
 		Type:    config.ActionCommand,
 		Address: "/cmd",
-		Command: fmt.Sprintf("%s Executor %s.%s", keyword, page, exec),
+		Command: fmt.Sprintf("%s Page %s.%s", keyword, page, exec),
+	}, nil
+}
+
+// flashPreset is the factory for gma3.flash — sends Flash On / Flash Off via /cmd.
+func flashPreset(params map[string]any) (config.ActionConfig, error) {
+	page, exec, err := pageExec(params)
+	if err != nil {
+		return config.ActionConfig{}, err
+	}
+	return config.ActionConfig{
+		Type:           config.ActionCommand,
+		Address:        "/cmd",
+		Command:        fmt.Sprintf("Flash On Page %s.%s", page, exec),
+		ReleaseCommand: fmt.Sprintf("Flash Off Page %s.%s", page, exec),
 	}, nil
 }
 

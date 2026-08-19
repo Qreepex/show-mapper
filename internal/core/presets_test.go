@@ -16,7 +16,7 @@ func init() {
 		func(params map[string]any) (config.ActionConfig, error) {
 			return config.ActionConfig{
 				Type: config.ActionCommand, Address: "/cmd",
-				Command: "Go Executor " + params["page"].(string) + "." + params["executor"].(string),
+				Command: "Go+ Page " + params["page"].(string) + "." + params["executor"].(string),
 			}, nil
 		},
 	)
@@ -62,7 +62,7 @@ func TestConductorDispatchPresetBinding(t *testing.T) {
 	if err != nil {
 		t.Fatal("no action dispatched:", err)
 	}
-	if act.Address != "/cmd" || act.Args[0] != "Go Executor 3.104" {
+	if act.Address != "/cmd" || act.Args[0] != "Go+ Page 3.104" {
 		t.Errorf("preset resolution wrong: %+v", act)
 	}
 }

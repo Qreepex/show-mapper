@@ -41,14 +41,14 @@ func TestPressReleaseActions(t *testing.T) {
 	cmd := config.Binding{
 		Source: "s", Control: "pad-1", Trigger: config.TriggerPressed, Target: "t",
 		Action: config.ActionConfig{Type: config.ActionCommand, Address: "/cmd",
-			Command: "Go Executor 1.201", ReleaseCommand: "Off Executor 1.201"},
+			Command: "Go+ Page 1.201", ReleaseCommand: "Off Page 1.201"},
 	}
 	a, ok := pressAction(cmd)
-	if !ok || a.Address != "/cmd" || a.Args[0] != "Go Executor 1.201" {
+	if !ok || a.Address != "/cmd" || a.Args[0] != "Go+ Page 1.201" {
 		t.Errorf("pressAction: %+v ok=%v", a, ok)
 	}
 	a, ok = releaseAction(cmd)
-	if !ok || a.Args[0] != "Off Executor 1.201" {
+	if !ok || a.Args[0] != "Off Page 1.201" {
 		t.Errorf("releaseAction: %+v ok=%v", a, ok)
 	}
 }

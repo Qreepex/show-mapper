@@ -48,7 +48,7 @@ func TestValidateBindingRules(t *testing.T) {
 		t.Fatal("expected error for invalid trigger")
 	}
 
-	missingCmd := strings.Replace(minimalYAML, "command: Go Executor 1.201", "", 1)
+	missingCmd := strings.Replace(minimalYAML, "command: Go+ Page 1.201", "", 1)
 	if _, err := Parse([]byte(missingCmd)); err == nil {
 		t.Fatal("expected error for command action without command")
 	}
@@ -137,7 +137,7 @@ bindings:
     action:
       type: command
       address: /cmd
-      command: Go Executor 1.201
+      command: Go+ Page 1.201
 `
 
 const profileYAML = `
