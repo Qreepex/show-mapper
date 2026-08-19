@@ -1,0 +1,109 @@
+# =============================================================================
+# showbridge — full annotated example configuration
+# Copy to "showbridge.yaml" and edit. `showbridge config init` writes a shorter
+# starter version. Schema reference: docs/architecture.md #configuration-model
+# =============================================================================
+
+version: 1
+
+# --- HTTP / Web UI ------------------------------------------------------------
+http:
+  # Web UI + REST API + WebSocket. Bind localhost unless you're on a trusted
+  # show network — there is NO authentication yet (see docs/architecture.md#security).
+  listen: 127.0.0.1:8080
+
+# --- Custom boards (user-defined device profiles) -----------------------------
+# Built-ins ship with the binary (MIDI: apc-mini-mk2, apc-mini).
+# Any other board can be described here in YAML or via the UI (Settings →
+# Custom boards). Find note/CC numbers on the Dashboard ticker or via
+# `showbridge midi monitor <device>`. Details: docs/midi-devices.md#custom-boards
+profiles:
+  - id: my-x-touch
+    type: midi                        # connector type the profile belongs to
+    name: Behringer X-Touch Compact (example)
+    match: ["X-TOUCH"]                # port-name substrings for auto-detection
+    led:
+      style: onOff                    # none | onOff | velocity | apc2-rgb
+      # onVelocity: 127               # for style onOff (default 127)
+      # colors: { red: 3, green: 1 }  # for style velocity (name -> velocity)
+    controls:
+      - { id: enc-1,   kind: encoder, label: "Encoder 1", cc: 10 }
+      - { id: fader-1, kind: fader,   label: "Fader 1",   cc: 1 }
+      - { id: pad-1,   kind: pad,     label: "Pad 1",     note: 36, hasLED: true }
+
+# --- Sources (where events come from) ------------------------------------------
+sources:
+  - id: wing                          # instance id, [a-z0-9-]
+    type: midi
+    profile: apc-mini-mk2             # built-in or custom profile id
+    options:
+      device: APC mini mk2            # case-insensitive substring of the OS port
+                                      # name. `showbridge midi list` shows names.
+                                      # Omit to use the profile's default match.
+
+# --- Targets (where actions go) -------------------------------------------------
+targets:
+  - id: ma3
+    type: osc
+    options:
+      host: 192.168.1.100             # grandMA3 console or onPC — CHANGE ME
+      port: 8000                      # must match the MA3 OSC row's Port
+                                      # (Menu > In & Out > OSC). MA3 uses one
+                                      # port for both send and receive per row.
+      prefix: ""                      # optional; matches the row's Prefix.
+                                      # GrandMA3-side setup: docs/grandma3.md
+
+# --- Bindings (control -> action) ------------------------------------------------
+bindings:
+  # 1) Toggle an executor key. Pad LED follows the toggle state.
+  - id: key-201
+    source: wing
+    control: pad-0-0                  # row 0 = bottom row (Akai numbering)
+    trigger: pressed                  # pressed | released | hold | value
+    mode: toggle                      # momentary (default) | toggle
+    target: ma3
+    action:
+      type: value                     # value: sends pressValue/releaseValue
+      address: /Page1/Key201          # executor keys: 0 = released, >0 = pressed
+      pressValue: 1
+      releaseValue: 0
+      valueType: int                  # int | float (MA3 faders/keys expect int)
+    led: { color: green, mode: on }   # optional: board LED for the "on" state
+
+  # 2) Run a grandMA3 keyword command on press (needs "Receive Command" in MA3's
+  #    OSC row). Docs: docs/grandma3.md
+  - id: go-202
+    source: wing
+    control: pad-0-1
+    trigger: pressed
+    mode: momentary
+    target: ma3
+    action:
+      type: command
+      address: /cmd
+      command: Go Executor 1.202
+      # releaseCommand: Off Executor 1.202
+
+  # 3) Flash+Go on hold, after holding the pad for 2 seconds.
+  - id: hold-flash
+    source: wing
+    control: pad-0-2
+    trigger: hold
+    holdMs: 2000
+    target: ma3
+    action:
+      type: command
+      address: /cmd
+      command: Flash Executor 1.203
+
+  # 4) Hardware fader -> grandMA3 executor fader (0..100).
+  - id: fader-201
+    source: wing
+    control: fader-1
+    trigger: value                    # fires on analog movement
+    target: ma3
+    action:
+      type: fader                     # scales the control's 0..1 into `range`
+      address: /Page1/Fader201
+      range: [0, 100]
+      valueType: int

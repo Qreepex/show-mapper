@@ -1,0 +1,68 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: go (vet, test, build — CGO off)
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+          cache: true
+      - run: go vet ./...
+      - run: go test ./...
+
+  lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: "0" # skips the RtMidi driver (needs C++; covered by release builds)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+          cache: true
+      - uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.1.6
+          args: --timeout 5m
+
+  web:
+    name: web (svelte-check + build) & full embed build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+          cache: true
+      - name: Install, type-check, build SPA
+        working-directory: web
+        run: npm ci && npm run check && npm run build
+      - name: Build backend with embedded SPA (CGO off)
+        env:
+          CGO_ENABLED: "0"
+        run: go build ./...
+      - name: Restore dist placeholders (keep repo clean of build output)
+        run: git checkout -- internal/server/dist/index.html internal/server/dist/200.html || true

@@ -1,0 +1,27 @@
+# --- Binaries / build output ---
+bin/
+*.exe
+*.exe~
+
+# --- Node / frontend ---
+node_modules/
+web/.svelte-kit/
+web/build/
+
+# Committed placeholders index.html / 200.html must survive in git;
+# real build output stays untracked noise.
+internal/server/dist/*
+!internal/server/dist/index.html
+!internal/server/dist/200.html
+
+# --- Local runtime config (never commit a show IP config by accident) ---
+showbridge.yaml
+showbridge.yml
+*.bak
+
+# --- OS/editor cruft ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
