@@ -33,6 +33,7 @@ func TestConductorRunsWithZeroModules(t *testing.T) {
 // someone removed the import) must not crash or block everything else:
 // the bad instance is skipped with an error log; valid neighbors keep running.
 func TestConductorSurvivesUnknownModuleTypes(t *testing.T) {
+	resetFakes()
 	cfg := config.Config{
 		Version: 1,
 		HTTP:    config.HTTPConfig{Listen: "127.0.0.1:0"},
@@ -51,7 +52,7 @@ func TestConductorSurvivesUnknownModuleTypes(t *testing.T) {
 	go cond.Run(ctx)
 
 	// the valid fake pair still connects and dispatches
-	src, err := waitFor(func() (*fakeSource, bool) { return testSrc, testSrc != nil })
+	src, err := waitFor(func() (*fakeSource, bool) { s := fakeSrc("wing"); return s, s != nil })
 	if err != nil {
 		t.Fatal("valid source not started despite unknown sibling:", err)
 	}

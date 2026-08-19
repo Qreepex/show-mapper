@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+	"log/slog"
 	"math"
 
 	"github.com/Qreepex/show-mapper/internal/config"
@@ -14,6 +16,14 @@ import (
 // PressAction resolves the payload for a "press" (or hold-fire, toggle-on).
 // ok == false means "configured to do nothing".
 func pressAction(b config.Binding) (Action, bool) {
+	if b.Action.Type == config.ActionTypePreset {
+		b2, err := resolvePreset(b)
+		if err != nil {
+			slog.Warn("preset resolve failed", "binding", b.Key(), "preset", b.Action.Preset, "err", err)
+			return Action{}, false
+		}
+		return pressAction(b2)
+	}
 	base := Action{BindingID: b.Key(), TargetID: b.Target, Kind: ActionKind(b.Action.Type), Address: b.Action.Address}
 	switch b.Action.Type {
 	case config.ActionCommand:
@@ -35,6 +45,14 @@ func pressAction(b config.Binding) (Action, bool) {
 
 // ReleaseAction resolves the payload for a "release" (or toggle-off in toggle mode).
 func releaseAction(b config.Binding) (Action, bool) {
+	if b.Action.Type == config.ActionTypePreset {
+		b2, err := resolvePreset(b)
+		if err != nil {
+			slog.Warn("preset resolve failed", "binding", b.Key(), "preset", b.Action.Preset, "err", err)
+			return Action{}, false
+		}
+		return releaseAction(b2)
+	}
 	base := Action{BindingID: b.Key(), TargetID: b.Target, Kind: ActionKind(b.Action.Type), Address: b.Action.Address}
 	switch b.Action.Type {
 	case config.ActionCommand:
@@ -56,6 +74,14 @@ func releaseAction(b config.Binding) (Action, bool) {
 // ValueAction resolves the payload for an analog "value" trigger:
 // the normalized source value (0..1) is scaled into the configured range.
 func valueAction(b config.Binding, v float64) (Action, bool) {
+	if b.Action.Type == config.ActionTypePreset {
+		b2, err := resolvePreset(b)
+		if err != nil {
+			slog.Warn("preset resolve failed", "binding", b.Key(), "preset", b.Action.Preset, "err", err)
+			return Action{}, false
+		}
+		return valueAction(b2, v)
+	}
 	if b.Action.Type != config.ActionFader || b.Action.Range == nil {
 		return Action{}, false
 	}
@@ -76,4 +102,21 @@ func numericArg(v float64, valueType string) any {
 		return float32(v)
 	}
 	return int32(int64(math.Round(v)))
+}
+
+// resolvePreset swaps a preset-typed action for its resolved concrete
+// ActionConfig (helper modules register presets in the core registry).
+func resolvePreset(b config.Binding) (config.Binding, error) {
+	ac, err := ResolveActionPreset(b.Action.Preset, b.Action.Params)
+	if err != nil {
+		return b, err
+	}
+	if ac.Type == config.ActionTypePreset {
+		return b, fmt.Errorf("preset %q resolved to another preset — loop", b.Action.Preset)
+	}
+	if ac.ValueType == "" {
+		ac.ValueType = b.Action.ValueType
+	}
+	b.Action = ac
+	return b, nil
 }

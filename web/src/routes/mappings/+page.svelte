@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api, ApiError } from "$lib/api";
+  import { api } from "$lib/api";
   import { ConfigDraft } from "$lib/draft.svelte";
-  import type { ActionType, Binding, Mode, Trigger } from "$lib/types";
+  import type { ActionPreset, ActionType, Binding, Mode, Trigger } from "$lib/types";
   import Card from "$lib/ui/Card.svelte";
   import PageHeader from "$lib/ui/PageHeader.svelte";
   import Button from "$lib/ui/Button.svelte";
@@ -14,13 +14,9 @@
   import NumberInput from "$lib/ui/NumberInput.svelte";
   import SelectInput from "$lib/ui/SelectInput.svelte";
   import EmptyState from "$lib/ui/EmptyState.svelte";
-  import Msg from "$lib/ui/Msg.svelte";
 
   const d = new ConfigDraft();
   onMount(() => d.init());
-
-  let presetSel = $state<Record<number, { id: string; params: Record<string, string> }>>({});
-  let presetMsg = $state<{ row: number; text: string; ok: boolean } | null>(null);
 
   function bindings(): Binding[] {
     return d.cfg?.bindings ?? [];
@@ -40,43 +36,74 @@
     return customs.map((c) => ({ id: c.id, label: c.label }));
   }
 
+  // ---- target-typed actions -------------------------------------------------
+  // Binding targets whose type has helper-module presets (e.g. gma3) get a
+  // friendly form (action dropdown + parameter fields); everything else gets
+  // the generic raw fields (command/value/fader).
+
+  function targetTypeOf(b: Binding): string {
+    return d.cfg?.targets.find((t) => t.id === b.target)?.type ?? "";
+  }
+
+  function presetsFor(targetType: string): ActionPreset[] {
+    return (d.meta?.presets ?? []).filter(
+      (p) => !p.targetTypes || p.targetTypes.length === 0 || p.targetTypes.includes(targetType),
+    );
+  }
+
+  function presetById(id: string): ActionPreset | undefined {
+    return d.meta?.presets.find((p) => p.id === id);
+  }
+
+  function defaultPresetParams(p: ActionPreset): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const f of p.fields) out[f.name] = String(f.default ?? "");
+    return out;
+  }
+
+  /** Switch a binding between preset mode and generic/raw mode. */
+  function setActionMode(b: Binding, presetId: string) {
+    if (presetId === "") {
+      b.action = {
+        type: "command",
+        address: b.action.address || "/cmd",
+        command: b.action.command ?? "",
+        valueType: "int",
+      };
+      return;
+    }
+    const p = presetById(presetId);
+    b.action = {
+      type: "preset",
+      preset: presetId,
+      params: p ? { ...defaultPresetParams(p) } : {},
+      address: "",
+      valueType: "int",
+    };
+  }
+
+  function paramStr(b: Binding, name: string): string {
+    const v = b.action.params?.[name];
+    return v === undefined || v === null ? "" : String(v);
+  }
+
   function addBinding() {
     if (!d.cfg) return;
+    const tgt = d.cfg.targets[0]?.id ?? "";
+    const tpres = presetsFor(targetTypeOf({ target: tgt } as Binding));
+    const action =
+      tpres.length > 0
+        ? { type: "preset" as ActionType, preset: tpres[0].id, params: defaultPresetParams(tpres[0]), address: "", valueType: "int" as const }
+        : { type: "command" as ActionType, address: "/cmd", command: "", valueType: "int" as const };
     d.cfg.bindings.push({
       source: d.cfg.sources[0]?.id ?? "",
       control: "",
       trigger: "pressed",
       mode: "momentary",
-      target: d.cfg.targets[0]?.id ?? "",
-      action: { type: "command", address: "/cmd", command: "", valueType: "int" },
+      target: tgt,
+      action,
       led: { color: "green", mode: "on" },
     });
-  }
-
-  // ---- presets (helper modules, e.g. gma3.*) ------------------------------
-  // NOTE: never mutate $state during template evaluation — all writes happen
-  // in event handlers (presetRow ensures the row entry exists lazily).
-
-  function presetView(i: number) {
-    return presetSel[i] ?? { id: "", params: {} };
-  }
-  function presetRow(i: number) {
-    if (!presetSel[i]) presetSel[i] = { id: "", params: {} };
-    return presetSel[i];
-  }
-  function presetMetaOf(id: string) {
-    return d.meta?.presets.find((p) => p.id === id);
-  }
-  async function applyPreset(i: number) {
-    const sel = presetRow(i);
-    if (!sel.id || !d.cfg) return;
-    presetMsg = null;
-    try {
-      d.cfg.bindings[i].action = await api.resolvePreset(sel.id, sel.params);
-      presetMsg = { row: i, text: `Preset ${sel.id} applied.`, ok: true };
-    } catch (e) {
-      presetMsg = { row: i, text: e instanceof ApiError ? e.errors.join("; ") : String(e), ok: false };
-    }
   }
 
   const LED_COLORS = ["green", "red", "orange", "yellow", "cyan", "blue", "purple", "pink", "white"];
@@ -108,13 +135,13 @@
     </EmptyState>
   {:else if bindings().length === 0}
     <EmptyState>
-      <p>No bindings yet. Press buttons on your board while watching the Dashboard ticker to discover control IDs (<code>pad-0-0</code>, <code>note:36</code>…).</p>
+      <p>No bindings yet. Press buttons on your board (or the <a href="/surface">Surface</a>) while watching the Dashboard ticker to discover control IDs (<code>pad-0-0</code>, <code>note:36</code>…).</p>
       <Button variant="primary" onclick={addBinding}>+ Add your first binding</Button>
     </EmptyState>
   {/if}
 
   {#each bindings() as b, i (i)}
-    {@const sel = presetView(i)}
+    {@const tpres = presetsFor(targetTypeOf(b))}
     <Card title={`${b.source}:${b.control || "?"} → ${b.target}`}>
       {#snippet actions()}
         <Button variant="danger" onclick={() => d.cfg && d.cfg.bindings.splice(i, 1)}>✕ remove</Button>
@@ -154,82 +181,94 @@
         </Field>
       </div>
 
-      {#if d.meta.presets.length > 0}
+      {#if tpres.length > 0}
+        <!-- target has helper actions (e.g. grandMA3): friendly form -->
         <div class="rowline">
-          <Field label="Preset (helper)">
-            <SelectInput value={sel.id} options={["", ...d.meta.presets.map((p) => p.id)]}
-              onchange={(e: Event) => { presetRow(i).id = (e.currentTarget as HTMLSelectElement).value; }} />
+          <Field label="Action">
+            <SelectInput
+              value={b.action.type === "preset" ? b.action.preset ?? "" : ""}
+              options={["", ...tpres.map((p) => ({ value: p.id, label: p.label }))]}
+              allowEmpty="— generic / raw OSC —"
+              onchange={(e: Event) => setActionMode(b, (e.currentTarget as HTMLSelectElement).value)}
+            />
           </Field>
-          {#if presetMetaOf(sel.id)}
-            {#each presetMetaOf(sel.id)!.fields as f (f.name)}
+          {#if b.action.type === "preset" && b.action.preset}
+            {#each presetById(b.action.preset)?.fields ?? [] as f (f.name)}
               <Field label={f.label} hint={f.help}>
                 {#if f.type === "number"}
-                  <NumberInput value={Number(sel.params[f.name] ?? numdef(f.default))}
-                    oninput={(e: Event) => { presetRow(i).params[f.name] = (e.currentTarget as HTMLInputElement).value; }} />
+                  <NumberInput
+                    value={Number(paramStr(b, f.name)) || numdef(f.default)}
+                    oninput={(e: Event) => {
+                      b.action.params = { ...(b.action.params ?? {}), [f.name]: (e.currentTarget as HTMLInputElement).value };
+                    }} />
                 {:else}
-                  <TextInput value={sel.params[f.name] ?? String(f.default ?? "")}
-                    oninput={(e: Event) => { presetRow(i).params[f.name] = (e.currentTarget as HTMLInputElement).value; }} />
+                  <TextInput
+                    value={paramStr(b, f.name)}
+                    placeholder={f.help ?? ""}
+                    oninput={(e: Event) => {
+                      b.action.params = { ...(b.action.params ?? {}), [f.name]: (e.currentTarget as HTMLInputElement).value };
+                    }} />
                 {/if}
               </Field>
             {/each}
-            <Field label="">
-              <Button onclick={() => applyPreset(i)}>Apply preset ↓</Button>
-            </Field>
           {/if}
         </div>
-        {#if presetMsg && presetMsg.row === i}
-          <Msg msg={{ text: presetMsg.text, ok: presetMsg.ok }} />
+        {#if b.action.type === "preset" && presetById(b.action.preset ?? "")?.help}
+          <p class="muted">{presetById(b.action.preset ?? "")?.help}</p>
         {/if}
       {/if}
 
-      <div class="rowline">
-        <Field label="Action type">
-          <SelectInput value={b.action.type} options={d.meta.actionTypes}
-            onchange={(e: Event) => { b.action.type = (e.currentTarget as HTMLSelectElement).value as ActionType; }} />
-        </Field>
-        <Field label="Address" grow>
-          <TextInput mono value={b.action.address} placeholder="/cmd, /Page1/Fader201, …"
-            oninput={(e: Event) => { b.action.address = (e.currentTarget as HTMLInputElement).value; }} />
-        </Field>
-        <Field label="Value type">
-          <SelectInput value={b.action.valueType ?? "int"} options={["int", "float"]}
-            onchange={(e: Event) => { b.action.valueType = (e.currentTarget as HTMLSelectElement).value as "int" | "float"; }} />
-        </Field>
-      </div>
+      {#if !(tpres.length > 0 && b.action.type === "preset")}
+        <!-- generic / raw action form -->
+        <div class="rowline">
+          <Field label="Action type">
+            <SelectInput value={b.action.type} options={d.meta.actionTypes.filter((t) => t !== "preset")}
+              onchange={(e: Event) => { b.action.type = (e.currentTarget as HTMLSelectElement).value as ActionType; }} />
+          </Field>
+          <Field label="Address" grow>
+            <TextInput mono value={b.action.address} placeholder="/cmd, /Page1/Fader201, …"
+              oninput={(e: Event) => { b.action.address = (e.currentTarget as HTMLInputElement).value; }} />
+          </Field>
+          <Field label="Value type">
+            <SelectInput value={b.action.valueType ?? "int"} options={["int", "float"]}
+              onchange={(e: Event) => { b.action.valueType = (e.currentTarget as HTMLSelectElement).value as "int" | "float"; }} />
+          </Field>
+        </div>
 
-      {#if b.action.type === "command"}
-        <div class="rowline">
-          <Field label="Command (on press)" grow>
-            <TextInput mono value={b.action.command ?? ""} placeholder="Go Executor 1.201"
-              oninput={(e: Event) => { b.action.command = (e.currentTarget as HTMLInputElement).value; }} />
-          </Field>
-          <Field label="Command (on release, optional)" grow>
-            <TextInput mono value={b.action.releaseCommand ?? ""}
-              oninput={(e: Event) => { b.action.releaseCommand = (e.currentTarget as HTMLInputElement).value; }} />
-          </Field>
-        </div>
-      {:else if b.action.type === "value"}
-        <div class="rowline">
-          <Field label="Press value">
-            <NumberInput value={b.action.pressValue ?? 1}
-              oninput={(e: Event) => { b.action.pressValue = Number((e.currentTarget as HTMLInputElement).value); }} />
-          </Field>
-          <Field label="Release value">
-            <NumberInput value={b.action.releaseValue ?? 0}
-              oninput={(e: Event) => { b.action.releaseValue = Number((e.currentTarget as HTMLInputElement).value); }} />
-          </Field>
-        </div>
-      {:else if b.action.type === "fader"}
-        <div class="rowline">
-          <Field label="Range min">
-            <NumberInput value={b.action.range?.[0] ?? 0}
-              oninput={(e: Event) => { b.action.range = [Number((e.currentTarget as HTMLInputElement).value), b.action.range?.[1] ?? 100]; }} />
-          </Field>
-          <Field label="Range max">
-            <NumberInput value={b.action.range?.[1] ?? 100}
-              oninput={(e: Event) => { b.action.range = [b.action.range?.[0] ?? 0, Number((e.currentTarget as HTMLInputElement).value)]; }} />
-          </Field>
-        </div>
+        {#if b.action.type === "command"}
+          <div class="rowline">
+            <Field label="Command (on press)" grow>
+              <TextInput mono value={b.action.command ?? ""} placeholder="Go Executor 1.201"
+                oninput={(e: Event) => { b.action.command = (e.currentTarget as HTMLInputElement).value; }} />
+            </Field>
+            <Field label="Command (on release, optional)" grow>
+              <TextInput mono value={b.action.releaseCommand ?? ""}
+                oninput={(e: Event) => { b.action.releaseCommand = (e.currentTarget as HTMLInputElement).value; }} />
+            </Field>
+          </div>
+        {:else if b.action.type === "value"}
+          <div class="rowline">
+            <Field label="Press value">
+              <NumberInput value={b.action.pressValue ?? 1}
+                oninput={(e: Event) => { b.action.pressValue = Number((e.currentTarget as HTMLInputElement).value); }} />
+            </Field>
+            <Field label="Release value">
+              <NumberInput value={b.action.releaseValue ?? 0}
+                oninput={(e: Event) => { b.action.releaseValue = Number((e.currentTarget as HTMLInputElement).value); }} />
+            </Field>
+          </div>
+        {:else if b.action.type === "fader"}
+          <div class="rowline">
+            <Field label="Range min">
+              <NumberInput value={b.action.range?.[0] ?? 0}
+                oninput={(e: Event) => { b.action.range = [Number((e.currentTarget as HTMLInputElement).value), b.action.range?.[1] ?? 100]; }} />
+            </Field>
+            <Field label="Range max">
+              <NumberInput value={b.action.range?.[1] ?? 100}
+                oninput={(e: Event) => { b.action.range = [b.action.range?.[0] ?? 0, Number((e.currentTarget as HTMLInputElement).value)]; }} />
+            </Field>
+          </div>
+        {/if}
       {/if}
 
       {#if b.mode === "toggle"}

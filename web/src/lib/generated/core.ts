@@ -52,6 +52,11 @@ export interface ActionPreset {
   label: string;
   help?: string;
   fields: FieldSpec[]; // parameter form (rendered by the UI)
+  /**
+   * TargetTypes scopes the preset to specific target types (e.g. ["gma3"]);
+   * empty = usable with any target.
+   */
+  targetTypes?: string[];
 }
 /**
  * ActionPresetFactory converts user-filled parameters to a concrete action.

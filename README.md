@@ -81,7 +81,7 @@ Handy: `show-mapper midi list`, `show-mapper midi monitor <device>`.
 | --- | --- |
 | Sources | **MIDI** (APC mini mk2 verified protocol, APC mini community map, custom boards via config/UI) · **`sim` virtual surface (in-browser board — no hardware/CGO needed)** · Stream Deck (USB HID) planned next - see TODO.md |
 | Triggers/Modes | pressed · released · hold (ms) · value · momentary · toggle (pad-LED feedback) |
-| Targets | **OSC/UDP** (generic module; per-instance NIC bind via `localAddress` — multiple NICs in parallel) · grandMA3 helper module with action presets (Go/GoBack/Pause/Flash/Temp/On/Off/Key/Fader) |
+| Targets | generic `osc` module (per-instance NIC bind via `localAddress`) · **`gma3` target type** (grandMA3 over OSC, shipped by its module) with stored preset actions (Go/GoBack/Pause/Flash/Temp/On/Off/Key/Fader/free cmd) — the editor adapts per target type |
 | Realtime UI | WebSocket ticker + connector status; config hot-reload on UI save *and* disk edits |
 | Config | single portable YAML (auto-detected next to the binary) · full **and per-section** UI import/export (bindings·sources·targets·boards) · hand-editable |
 | Types | backend ⇄ frontend types generated from Go (`make types`, tygo) |

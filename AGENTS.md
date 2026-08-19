@@ -101,9 +101,14 @@ CI runs: `go vet`, `go test`, `go build` (CGO off), `npm run check`, `npm run bu
 
 1. Create `internal/helpers/<name>/` with an `init()` calling
    `core.RegisterActionPreset(...)` per preset + README.md with the console
-   setup instructions.
-2. Blank-import in `main.go`. The UI picks it up automatically via `/api/meta`.
-   Working example: `internal/helpers/gma3`.
+   setup instructions. Scope presets via `TargetTypes` (e.g. `["gma3"]`).
+2. A helper module may also register its own target type
+   (`core.RegisterTarget("<name>", …)`) — self-contained transport code; the
+   Mappings UI then renders preset fields instead of raw action forms.
+   Working example: `internal/helpers/gma3` (presets + `gma3` target).
+3. Blank-import in `main.go`. The UI picks everything up automatically via `/api/meta`.
+4. Presets are *stored* in bindings (`type: preset` + params) and resolved at
+   dispatch time.
 
 ### Add a source connector (e.g. Elgato Stream Deck) - next planned
 

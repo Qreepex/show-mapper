@@ -87,7 +87,7 @@ export interface ProfileLED {
    * Colors maps color names to velocity values for style velocity
    * (empty = APC-mini-1 scheme: green=1, red=3, yellow=5).
    */
-  colors?: { [key: string]: number /* int */ };
+  colors?: { [key: string]: number /* int */};
 }
 /**
  * ProfileControl is one control of a user-defined profile.
@@ -139,7 +139,7 @@ export interface SourceConfig {
   /**
    * Options holds connector-type-specific settings (decoded by the connector).
    */
-  options?: { [key: string]: any };
+  options?: { [key: string]: any};
 }
 /**
  * TargetConfig describes one output target instance, e.g. a grandMA3 console.
@@ -147,7 +147,7 @@ export interface SourceConfig {
 export interface TargetConfig {
   id: string;
   type: string; // e.g. "osc", future: "artnet", "sacn", ...
-  options?: { [key: string]: any };
+  options?: { [key: string]: any};
 }
 /**
  * Binding maps an event on a source control to an action on a target.
@@ -191,10 +191,11 @@ export interface LEDConfig {
  * ActionConfig describes what to send to a target. Fields used depend on Type.
  */
 export interface ActionConfig {
-  type: string; // command | value | fader
+  type: string; // command | value | fader | preset
   /**
    * Address is the target-side address selector.
    * For target "osc" this is the OSC address, e.g. "/cmd" or "/Page1/Fader201".
+   * Not used for Type == "preset" (the preset resolves the address).
    */
   address: string;
   /**
@@ -207,6 +208,12 @@ export interface ActionConfig {
    */
   pressValue?: number /* float64 */;
   releaseValue?: number /* float64 */;
+  /**
+   * Type "preset": helper-module template, resolved at dispatch. Params feed
+   * the preset's fields (see /api/meta presets and internal/helpers/<x>).
+   */
+  preset?: string;
+  params?: { [key: string]: any};
   /**
    * Type "fader": the source control's value (0..1) is scaled into Range.
    */
@@ -227,6 +234,11 @@ export const ModeToggle = "toggle";
 export const ActionCommand = "command";
 export const ActionValue = "value";
 export const ActionFader = "fader";
+/**
+ * ActionPreset is a helper-module action stored by reference
+ * (preset id + params), resolved at dispatch time via the preset registry.
+ */
+export const ActionTypePreset = "preset";
 export const ValueTypeInt = "int";
 export const ValueTypeFloat = "float";
 /**

@@ -26,6 +26,9 @@ type ActionPreset struct {
 	Label  string      `json:"label"`
 	Help   string      `json:"help,omitempty"`
 	Fields []FieldSpec `json:"fields"` // parameter form (rendered by the UI)
+	// TargetTypes scopes the preset to specific target types (e.g. ["gma3"]);
+	// empty = usable with any target.
+	TargetTypes []string `json:"targetTypes,omitempty"`
 }
 
 type presetEntry struct {

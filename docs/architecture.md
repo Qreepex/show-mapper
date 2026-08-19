@@ -103,6 +103,7 @@ early release); `value` fires on analog movement (fader/encoder).
 
 **Action kinds:** `command` (string payload, e.g. MA3 syntax), `value`
 (fixed numbers on press/release), `fader` (source value scaled into a range),
+`preset` (helper-module template + params, resolved at dispatch),
 serialization `int` (default) or `float` per binding.
 
 Error philosophy: config structural problems → rejected with a message list;
@@ -164,17 +165,25 @@ package's `init()`; `cmd/show-mapper/main.go` imports connectors explicitly
 (listed there). `TypeInfo` includes the **option field schema**
 (`[]FieldSpec`) so the Settings UI renders forms it knows nothing about.
 
-### 5.1b Helper modules & action presets
+### 5.1b Helper modules, action presets, and target-typed actions
 
-Connectors stay 100% generic; *readiness conveniences* for a specific
-ecosystem (e.g. grandMA3's Go/Flash/Temp/On/Off vocabulary) ship as **helper
-modules** under `internal/helpers/<name>` that register **action presets**
-(`core.RegisterActionPreset`). Presets are authoring-time sugar: the UI lists
-them via `/api/meta`, the user fills the preset's fields, and
-`POST /api/presets/resolve` turns them into a plain `config.ActionConfig`
-stored in the binding - core never sees vendor concepts and presets have zero
-runtime cost. Project rule: all module-specific code *and documentation* live
-inside the module dir (example: `internal/helpers/gma3/README.md`).
+Connectors stay 100% generic; *ecosystem conveniences* (like grandMA3's
+Go/Flash/Temp/On/Off vocabulary AND its `gma3` target type) ship as **helper
+modules** under `internal/helpers/<name>`. A helper module may register:
+- **action presets** (`core.RegisterActionPreset`) — 
+  resolvable templates with parameter fields (`FieldSpec`s), scoped per target
+  type (`TargetTypes`), e.g. only offered when a binding's target is `gma3`.
+- a **target type** from inside the module (`core.RegisterTarget("gma3", …)`)
+  — self-contained transport code; the generic connectors never name vendors.
+
+Presets are stored in bindings (`action: {type: preset, preset: id, params}`)
+and 
+**resolved at dispatch time** (`core/binding.go`) — the resolved result flows
+through the same press/release/toggle/hold/value machinery as hand-written
+actions. The UI adapts: bindings against such targets render the preset's
+fields instead of raw action forms ("generic / raw" stays available).
+Project rule: all module-specific code *and documentation* live inside the
+module dir (example: `internal/helpers/gma3/README.md`).
 
 ### 5.2 Adding a source - checklist (worked example: **Stream Deck**, the planned next step)
 

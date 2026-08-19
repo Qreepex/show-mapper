@@ -187,10 +187,11 @@ func (b Binding) LEDMode() string {
 
 // ActionConfig describes what to send to a target. Fields used depend on Type.
 type ActionConfig struct {
-	Type string `yaml:"type" json:"type"` // command | value | fader
+	Type string `yaml:"type" json:"type"` // command | value | fader | preset
 
 	// Address is the target-side address selector.
 	// For target "osc" this is the OSC address, e.g. "/cmd" or "/Page1/Fader201".
+	// Not used for Type == "preset" (the preset resolves the address).
 	Address string `yaml:"address" json:"address"`
 
 	// Type "command": free-form command strings (e.g. grandMA3 keyword syntax).
@@ -200,6 +201,11 @@ type ActionConfig struct {
 	// Type "value": fixed values sent on press (and optionally on release).
 	PressValue   *float64 `yaml:"pressValue,omitempty" json:"pressValue,omitempty"`
 	ReleaseValue *float64 `yaml:"releaseValue,omitempty" json:"releaseValue,omitempty"`
+
+	// Type "preset": helper-module template, resolved at dispatch. Params feed
+	// the preset's fields (see /api/meta presets and internal/helpers/<x>).
+	Preset string         `yaml:"preset,omitempty" json:"preset,omitempty"`
+	Params map[string]any `yaml:"params,omitempty" json:"params,omitempty"`
 
 	// Type "fader": the source control's value (0..1) is scaled into Range.
 	Range *[2]float64 `yaml:"range,omitempty" json:"range,omitempty"`
@@ -240,10 +246,13 @@ const (
 	ActionCommand = "command"
 	ActionValue   = "value"
 	ActionFader   = "fader"
+	// ActionPreset is a helper-module action stored by reference
+	// (preset id + params), resolved at dispatch time via the preset registry.
+	ActionTypePreset = "preset"
 )
 
 // ActionTypes lists the valid action types.
-var ActionTypes = []string{ActionCommand, ActionValue, ActionFader}
+var ActionTypes = []string{ActionCommand, ActionValue, ActionFader, ActionTypePreset}
 
 const (
 	ValueTypeInt   = "int"
@@ -599,6 +608,12 @@ func (a ActionConfig) validate(where string) []error {
 	var errs []error
 	if !contains(ActionTypes, a.Type) {
 		errs = append(errs, fmt.Errorf("%s: action.type must be one of %s", where, strings.Join(ActionTypes, ", ")))
+	}
+	if a.Type == ActionTypePreset {
+		if a.Preset == "" {
+			errs = append(errs, fmt.Errorf("%s: action.preset required for type=preset", where))
+		}
+		return errs
 	}
 	if !strings.HasPrefix(a.Address, "/") {
 		errs = append(errs, fmt.Errorf("%s: action.address must start with \"/\"", where))

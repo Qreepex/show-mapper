@@ -1,7 +1,7 @@
 # =============================================================================
 # show-mapper — full annotated example configuration
-# Copy to "show-mapper.yaml" and edit. `show-mapper config init` writes a shorter
-# starter version. Schema reference: docs/architecture.md #configuration-model
+# On first start a minimal config is auto-created; this is the annotated tour.
+# Schema reference: docs/architecture.md §configuration-model
 # =============================================================================
 
 version: 1
@@ -9,92 +9,76 @@ version: 1
 # --- HTTP / Web UI ------------------------------------------------------------
 http:
   # Web UI + REST API + WebSocket. Bind localhost unless you're on a trusted
-  # show network — there is NO authentication yet (see docs/architecture.md#security).
+  # show network — there is NO authentication yet (see docs/architecture.md §security).
   listen: 127.0.0.1:8484
 
 # --- Self-update (optional) ----------------------------------------------------
-# Checks this GitHub repo's releases for a newer show-mapper build; the UI shows
-# a banner and can download+install (checksum-verified) in place.
+# Checks this GitHub repo's releases for a newer build; the UI shows a banner
+# and can download+install (checksum-verified) in place.
 # updates:
-#   repo: owner/repo        # e.g. Qreepex/show-mapper — empty = feature off
-#   autoCheck: false        # check on startup
+#   repo: Qreepex/show-mapper   # empty/absent = feature off
+#   autoCheck: false            # check on startup
 
 # --- Custom boards (user-defined device profiles) -----------------------------
-# Built-ins ship with the binary (MIDI: apc-mini-mk2, apc-mini).
-# Any other board can be described here in YAML or via the UI (Settings →
-# Custom boards). Find note/CC numbers on the Dashboard ticker or via
-# `show-mapper midi monitor <device>`. Details: docs/midi-devices.md#custom-boards
+# Built-ins ship with the binary (MIDI: apc-mini-mk2, apc-mini); describe any
+# other board here or in the UI (Boards tab). Find note/CC numbers on the
+# Dashboard ticker or via `show-mapper midi monitor <device>`.
+# Details: docs/midi-devices.md#custom-boards
 profiles:
   - id: my-x-touch
-    type: midi # connector type the profile belongs to
+    type: midi                        # connector type the profile belongs to
     name: Behringer X-Touch Compact (example)
-    match: ["X-TOUCH"] # port-name substrings for auto-detection
+    match: ["X-TOUCH"]                # port-name substrings for auto-detect
     led:
-      style: onOff # none | onOff | velocity | apc2-rgb
+      style: onOff                    # none | onOff | velocity | apc2-rgb
       # onVelocity: 127               # for style onOff (default 127)
       # colors: { red: 3, green: 1 }  # for style velocity (name -> velocity)
     controls:
-      - { id: enc-1, kind: encoder, label: "Encoder 1", cc: 10 }
-      - { id: fader-1, kind: fader, label: "Fader 1", cc: 1 }
-      - { id: pad-1, kind: pad, label: "Pad 1", note: 36, hasLED: true }
+      - { id: enc-1,   kind: encoder, label: "Encoder 1", cc: 10 }
+      - { id: fader-1, kind: fader,   label: "Fader 1",   cc: 1 }
+      - { id: pad-1,   kind: pad,     label: "Pad 1",     note: 36, hasLED: true }
 
 # --- Sources (where events come from) ------------------------------------------
 sources:
-  - id: wing # instance id, [a-z0-9-]
+  - id: wing                          # instance id, [a-z0-9-]
     type: midi
-    profile: apc-mini-mk2 # built-in or custom profile id
+    profile: apc-mini-mk2             # built-in or custom profile id
     options:
-      device:
-        APC mini mk2 # case-insensitive substring of the OS port
-        # name. `show-mapper midi list` shows names.
-        # Omit to use the profile's default match.
+      device: APC mini mk2            # case-insensitive substring of the OS port
+                                      # name. `show-mapper midi list` shows names.
 
 # --- Targets (where actions go) -------------------------------------------------
 targets:
+  # Connector type "gma3": grandMA3 over OSC/UDP with MA-appropriate defaults;
+  # bindings then offer the friendly action picker (Go/Flash/Temp/Key/Fader/…)
+  # instead of raw addresses. Console-side setup: internal/helpers/gma3/README.md.
   - id: ma3
-    type: osc
+    type: gma3
     options:
-      host: 192.168.1.100 # grandMA3 console or onPC — CHANGE ME
-      port:
-        8000 # must match the MA3 OSC row's Port
-        # (Menu > In & Out > OSC). MA3 uses one
-        # port for both send and receive per row.
-      prefix:
-        "" # optional; matches the row's Prefix.
-        # GrandMA3-side setup: internal/helpers/gma3/README.md
+      host: 192.168.1.100             # grandMA3 console or onPC — CHANGE ME
+      port: 8000                      # must match the MA3 OSC row's Port
+      # prefix: ""                    # optional; matches the row's Prefix
+      # localAddress: 192.168.1.50    # optional NIC pin for multi-homed machines
+  # Raw/generic OSC to anything else: use type: osc with the same options.
 
 # --- Bindings (control -> action) ------------------------------------------------
+# For gma3-type targets the friendly way is action type "preset": pick a module
+# preset + fill params — resolved at dispatch by internal/helpers/gma3.
 bindings:
-  # 1) Toggle an executor key. Pad LED follows the toggle state.
+  # 1) Toggle an executor key (LED follows toggle state).
   - id: key-201
     source: wing
-    control: pad-0-0 # row 0 = bottom row (Akai numbering)
-    trigger: pressed # pressed | released | hold | value
-    mode: toggle # momentary (default) | toggle
+    control: pad-0-0                  # row 0 = bottom row (Akai numbering)
+    trigger: pressed                  # pressed | released | hold | value
+    mode: toggle                      # momentary (default) | toggle
     target: ma3
     action:
-      type: value # value: sends pressValue/releaseValue
-      address: /Page1/Key201 # executor keys: 0 = released, >0 = pressed
-      pressValue: 1
-      releaseValue: 0
-      valueType: int # int | float (MA3 faders/keys expect int)
-    led: { color: green, mode: on } # optional: board LED for the "on" state
+      type: preset
+      preset: gma3.key
+      params: { page: "1", executor: "201" }
+    led: { color: green, mode: on }
 
-  # 2) Run a grandMA3 keyword command on press (needs "Receive Command" in MA3's
-  #    OSC row). Docs: internal/helpers/gma3/README.md
-  - id: go-202
-    source: wing
-    control: pad-0-1
-    trigger: pressed
-    mode: momentary
-    target: ma3
-    action:
-      type: command
-      address: /cmd
-      command: Go Executor 1.202
-      # releaseCommand: Off Executor 1.202
-
-  # 3) Flash+Go on hold, after holding the pad for 2 seconds.
+  # 2) Flash on 2s hold.
   - id: hold-flash
     source: wing
     control: pad-0-2
@@ -102,18 +86,32 @@ bindings:
     holdMs: 2000
     target: ma3
     action:
-      type: command
-      address: /cmd
-      command: Flash Executor 1.203
+      type: preset
+      preset: gma3.flash
+      params: { page: "1", executor: "203" }
 
-  # 4) Hardware fader -> grandMA3 executor fader (0..100).
+  # 3) Free MA3 keyword command (preset gma3.cmd == raw /cmd string).
+  - id: go-202
+    source: wing
+    control: pad-0-1
+    trigger: pressed
+    target: ma3
+    action:
+      type: preset
+      preset: gma3.cmd
+      params: { command: "Go Executor 1.202" }
+
+  # 4) Hardware fader -> executor fader (0..100).
   - id: fader-201
     source: wing
     control: fader-1
-    trigger: value # fires on analog movement
+    trigger: value
     target: ma3
     action:
-      type: fader # scales the control's 0..1 into `range`
-      address: /Page1/Fader201
-      range: [0, 100]
-      valueType: int
+      type: preset
+      preset: gma3.fader
+      params: { page: "1", executor: "201" }    # optional params: min/max
+
+  # Raw remains fully available on type: osc targets — and via a gma3
+  # binding's "— generic / raw OSC —" action selection:
+  #   action: { type: value, address: /Page1/Key201, pressValue: 1, releaseValue: 0 }

@@ -20,48 +20,46 @@ sources:
     options:
       device: APC mini mk2    # substring of the OS port name (show-mapper midi list)
 
-# --- Targets: where actions go ----------------------------------------------
+# --- Targets: where actions go ------------------------------------------------
 targets:
   - id: ma3
-    type: osc
+    type: gma3                # grandMA3 over OSC/UDP (module: internal/helpers/gma3)
     options:
       host: 192.168.1.100     # grandMA3 console/onPC IP — TODO: change me
       port: 8000              # must match the OSC row's Port in MA3 (Menu > In & Out > OSC)
       # prefix: ""            # optional; must match the MA3 OSC row Prefix
 
-# --- Bindings: control -> action --------------------------------------------
+# --- Bindings: control -> action ----------------------------------------------
 bindings:
-  # Pad (row 0 = bottom) toggles executor 201 on page 1 using MA3's OSC fader/key addresses.
+  # Pad (row 0 = bottom) toggles executor 201 on page 1 (LED follows state).
   - source: wing
     control: pad-0-0
     trigger: pressed
     mode: toggle
     target: ma3
     action:
-      type: value
-      address: /Page1/Key201     # executor key: 0 = released, >0 = pressed
-      pressValue: 1
-      releaseValue: 0
+      type: preset
+      preset: gma3.key
+      params: { page: "1", executor: "201" }
     led: { color: green }
 
-  # Send grandMA3 command line input via OSC (/cmd requires "Receive Command" enabled).
+  # Momentary "Go" for executor 1.202.
   - source: wing
     control: pad-0-1
     trigger: pressed
     target: ma3
     action:
-      type: command
-      address: /cmd
-      command: Go Executor 1.202
+      type: preset
+      preset: gma3.go
+      params: { page: "1", executor: "202" }
 
-  # Hardware fader -> MA3 executor fader (0..100).
+  # Hardware fader -> executor fader (0..100).
   - source: wing
     control: fader-1
     trigger: value
     target: ma3
     action:
-      type: fader
-      address: /Page1/Fader201
-      range: [0, 100]
-      valueType: int
+      type: preset
+      preset: gma3.fader
+      params: { page: "1", executor: "201" }
 `

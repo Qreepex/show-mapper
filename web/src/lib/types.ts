@@ -30,7 +30,7 @@ export type TargetAction = ActionReport;
 
 export type Trigger = "pressed" | "released" | "hold" | "value";
 export type Mode = "momentary" | "toggle";
-export type ActionType = "command" | "value" | "fader";
+export type ActionType = "command" | "value" | "fader" | "preset";
 export type ValueType = "int" | "float";
 
 // ---- /api/meta (backend assembles this from registries; not one Go struct) -

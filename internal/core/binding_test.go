@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -106,18 +107,44 @@ func (f *fakeTarget) Type() string                  { return "fake" }
 func (f *fakeTarget) Send(a Action) error           { f.sent <- a; return nil }
 
 var (
-	testSrc *fakeSource
-	testTgt *fakeTarget
+	fakesMu   sync.Mutex
+	fakesSrcs = map[string]*fakeSource{}
+	fakesTgts = map[string]*fakeTarget{}
 )
+
+func resetFakes() {
+	fakesMu.Lock()
+	fakesSrcs = map[string]*fakeSource{}
+	fakesTgts = map[string]*fakeTarget{}
+	fakesMu.Unlock()
+}
+
+func fakeSrc(id string) *fakeSource {
+	fakesMu.Lock()
+	defer fakesMu.Unlock()
+	return fakesSrcs[id]
+}
+
+func fakeTgt(id string) *fakeTarget {
+	fakesMu.Lock()
+	defer fakesMu.Unlock()
+	return fakesTgts[id]
+}
 
 func init() {
 	RegisterSource("fake", TypeInfo{Name: "fake source"}, func(cfg config.SourceConfig, _ SourceBuildContext) (Source, error) {
-		testSrc = &fakeSource{cfg: cfg, events: make(chan Event, 16)}
-		return testSrc, nil
+		s := &fakeSource{cfg: cfg, events: make(chan Event, 16)}
+		fakesMu.Lock()
+		fakesSrcs[cfg.ID] = s
+		fakesMu.Unlock()
+		return s, nil
 	})
 	RegisterTarget("fake", TypeInfo{Name: "fake target"}, func(cfg config.TargetConfig) (Target, error) {
-		testTgt = &fakeTarget{cfg: cfg, sent: make(chan Action, 16)}
-		return testTgt, nil
+		tg := &fakeTarget{cfg: cfg, sent: make(chan Action, 16)}
+		fakesMu.Lock()
+		fakesTgts[cfg.ID] = tg
+		fakesMu.Unlock()
+		return tg, nil
 	})
 }
 
@@ -136,6 +163,7 @@ func waitFor[T any](get func() (T, bool)) (T, error) {
 }
 
 func TestConductorDispatchMomentary(t *testing.T) {
+	resetFakes()
 	pressV, relV := 1.0, 0.0
 	cfg := config.Config{
 		Version: 1,
@@ -154,17 +182,19 @@ func TestConductorDispatchMomentary(t *testing.T) {
 	defer cancel()
 	go c.Run(ctx)
 
-	src, err := waitFor(func() (*fakeSource, bool) { return testSrc, testSrc != nil })
+	src, err := waitFor(func() (*fakeSource, bool) { s := fakeSrc("wing"); return s, s != nil })
 	if err != nil {
 		t.Fatal("source not started:", err)
 	}
-	// drain the constructor-created status broadcasts not needed; NopSink anyway.
-
 	src.events <- Event{SourceID: "wing", Control: "pad-0-0", Kind: EventPressed, Value: 1, When: time.Now()}
 
 	act, err := waitFor(func() (Action, bool) {
+		tgt := fakeTgt("out")
+		if tgt == nil {
+			return Action{}, false
+		}
 		select {
-		case a := <-testTgt.sent:
+		case a := <-tgt.sent:
 			return a, true
 		default:
 			return Action{}, false

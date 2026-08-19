@@ -1,10 +1,9 @@
 // Package gma3 is the grandMA3 helper *module*: it registers ready-made
 // action presets (Go, Go-, Pause, Flash, Temp, On, Off, executor key/fader)
-// that resolve into plain OSC actions for the generic "osc" target.
-//
-// IMPORTANT (project rule): show-mapper core stays console-agnostic — nothing
-// about grandMA3 lives outside this directory (code AND docs, see README.md
-// here). The software runs with or without this module compiled in.
+// AND the "gma3" target type (OSC transport with MA3-appropriate defaults) —
+// see target.go. Everything grandMA3-specific lives in this directory
+// (project rule: core stays console-agnostic; the app runs with or without
+// this module).
 package gma3
 
 import (
@@ -19,42 +18,52 @@ import (
 // In short: executor keys/faders are addressed as /Page<P>/(Key|Fader)<E>, and
 // free-form keyword commands go to /cmd as a string.
 
-func init() {
-	core.RegisterActionPreset(core.ActionPreset{
-		ID: "gma3.cmd", Source: "gma3", Label: "grandMA3: keyword command (/cmd)",
-		Help:   "Runs any grandMA3 keyword via OSC /cmd (console needs 'Receive Command' enabled).",
-		Fields: []core.FieldSpec{fieldCommand},
-	}, cmdPreset)
+const targetGMA3 = "gma3"
 
-	for _, p := range []struct{ id, label, keyword string }{
-		{"gma3.go", "grandMA3: Go", "Go"},
-		{"gma3.goback", "grandMA3: GoBack (Go-)", "GoBack"},
-		{"gma3.pause", "grandMA3: Pause", "Pause"},
-		{"gma3.flash", "grandMA3: Flash (momentary)", "Flash"},
-		{"gma3.temp", "grandMA3: Temp", "Temp"},
-		{"gma3.on", "grandMA3: On", "On"},
-		{"gma3.off", "grandMA3: Off", "Off"},
+func init() {
+	keywordFields := []core.FieldSpec{fieldPage, fieldExecutor}
+	for _, p := range []struct{ id, label, help, keyword string }{
+		{"gma3.cmd", "grandMA3: keyword command (/cmd)", "Runs any grandMA3 keyword via OSC /cmd (console needs 'Receive Command' enabled on the OSC row).", ""},
+		{"gma3.go", "grandMA3: Go", "", "Go"},
+		{"gma3.goback", "grandMA3: GoBack (Go-)", "", "GoBack"},
+		{"gma3.pause", "grandMA3: Pause", "", "Pause"},
+		{"gma3.flash", "grandMA3: Flash (momentary)", "", "Flash"},
+		{"gma3.temp", "grandMA3: Temp", "", "Temp"},
+		{"gma3.on", "grandMA3: On", "", "On"},
+		{"gma3.off", "grandMA3: Off", "", "Off"},
 	} {
 		p := p
+		fields := keywordFields
+		if p.id == "gma3.cmd" {
+			fields = []core.FieldSpec{fieldCommand}
+		}
+		help := p.help
+		if help == "" {
+			help = fmt.Sprintf("%s Executor — sent as %q targeting page.executor.", p.label, p.keyword)
+		}
 		core.RegisterActionPreset(core.ActionPreset{
-			ID: p.id, Source: "gma3", Label: p.label,
-			Help:   fmt.Sprintf("%s Executor — sent as %q command targeting page.executor.", p.label, p.keyword),
-			Fields: []core.FieldSpec{fieldPage, fieldExecutor},
+			ID: p.id, Source: targetGMA3, Label: p.label, Help: help,
+			Fields: fields, TargetTypes: []string{targetGMA3},
 		}, func(params map[string]any) (config.ActionConfig, error) {
+			if p.id == "gma3.cmd" {
+				return cmdPreset(params)
+			}
 			return keywordPreset(p.keyword, params)
 		})
 	}
 
 	core.RegisterActionPreset(core.ActionPreset{
-		ID: "gma3.key", Source: "gma3", Label: "grandMA3: executor key (press/release)",
-		Help:   "Direct key presses on an executor: press (>0) / release (0) — ideal for toggle bindings.",
-		Fields: []core.FieldSpec{fieldPage, fieldExecutor},
+		ID: "gma3.key", Source: targetGMA3, Label: "grandMA3: executor key (press/release)",
+		Help:        "Direct key presses on an executor: press (>0) / release (0) — ideal for toggle bindings.",
+		Fields:      keywordFields,
+		TargetTypes: []string{targetGMA3},
 	}, keyPreset)
 
 	core.RegisterActionPreset(core.ActionPreset{
-		ID: "gma3.fader", Source: "gma3", Label: "grandMA3: executor fader",
-		Help:   "Scales a hardware fader/encoder onto an executor fader.",
-		Fields: []core.FieldSpec{fieldPage, fieldExecutor, fieldMin, fieldMax},
+		ID: "gma3.fader", Source: targetGMA3, Label: "grandMA3: executor fader",
+		Help:        "Scales a hardware fader/encoder onto an executor fader.",
+		Fields:      []core.FieldSpec{fieldPage, fieldExecutor, fieldMin, fieldMax},
+		TargetTypes: []string{targetGMA3},
 	}, faderPreset)
 }
 
