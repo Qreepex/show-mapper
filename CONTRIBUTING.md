@@ -10,7 +10,7 @@ For MIDI-enabled builds additionally a C/C++ toolchain -
 see [docs/releasing.md](docs/releasing.md#build-prerequisites-per-os).
 
 ```bash
-git clone <repo> && cd show-tools
+git clone <repo> && cd show-mapper
 make web && make build-nocgo   # UI + binary w/o MIDI
 make check                     # must be green before PRs
 ```

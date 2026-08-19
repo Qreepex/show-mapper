@@ -32,15 +32,20 @@ build-nocgo:
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/show-mapper
 	@echo "built $(BIN) ($(VERSION), no MIDI)"
 
-## run: run backend (serves API+UI on :8080). Uses CGO (real MIDI) when a C
-## compiler is available, otherwise the stub + virtual Surface for development.
+## run: run backend (serves API+UI on :8080). Uses CGO (real MIDI) when the
+## full native toolchain is available (Linux additionally needs ALSA headers),
+## otherwise falls back to the stub + virtual Surface for development.
 run:
-	@if command -v gcc >/dev/null 2>&1 || command -v cc >/dev/null 2>&1 || command -v clang >/dev/null 2>&1; then \
-		echo "C compiler found → MIDI enabled (CGO_ENABLED=1)"; \
+	@if (command -v gcc >/dev/null 2>&1 || command -v cc >/dev/null 2>&1 || command -v clang >/dev/null 2>&1) && \
+	    { [ "$$(uname -s)" != "Linux" ] || { command -v pkg-config >/dev/null 2>&1 && pkg-config --exists alsa; }; }; then \
+		echo "toolchain OK → MIDI enabled (CGO_ENABLED=1)"; \
 		CGO_ENABLED=1 go run ./cmd/show-mapper serve; \
 	else \
-		echo "no C compiler found → building WITHOUT MIDI hardware support"; \
-		echo "  → use the built-in virtual surface: http://127.0.0.1:8080/surface"; \
+		echo "no full MIDI toolchain → building WITHOUT MIDI hardware support"; \
+		if [ "$$(uname -s)" = "Linux" ]; then \
+			echo "  (Linux: sudo apt-get install -y build-essential libasound2-dev pkg-config)"; \
+		fi; \
+		echo "  → use the built-in virtual surface meanwhile: http://127.0.0.1:8080/surface"; \
 		CGO_ENABLED=0 go run ./cmd/show-mapper serve; \
 	fi
 

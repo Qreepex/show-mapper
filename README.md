@@ -47,8 +47,11 @@ compiled in; nothing device- or console-specific lives at the top level.
 ## Quick start (developer)
 
 ```bash
-# prerequisites: Go 1.24+, Node 22+; a C++ toolchain only for MIDI-enabled builds
-git clone <repo> && cd show-tools
+# prerequisites: Go 1.24+, Node 22+; a C++ toolchain only for MIDI-enabled builds:
+#   Linux/WSL: sudo apt-get install -y build-essential libasound2-dev pkg-config
+#   macOS:     Xcode command line tools (xcode-select --install)
+#   Windows:   choco install mingw   (or MSYS2 ucrt64 gcc)
+git clone <repo> && cd show-mapper
 
 make web          # build the Svelte 5 UI (into internal/server/dist)
 make build-nocgo  # fast path: binary without MIDI hardware support
