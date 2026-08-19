@@ -59,6 +59,14 @@ func init() {
 		TargetTypes: []string{targetGMA3},
 	}, flashPreset)
 
+	// Temp also needs On/Off just like Flash.
+	core.RegisterActionPreset(core.ActionPreset{
+		ID: "gma3.temp", Source: targetGMA3, Label: "grandMA3: Temp (momentary)",
+		Help:        "Temp On (press) / Temp Off (release) — OSC /cmd \"Temp On Page <page>.<executor>\".",
+		Fields:      keywordFields,
+		TargetTypes: []string{targetGMA3},
+	}, tempPreset)
+
 	core.RegisterActionPreset(core.ActionPreset{
 		ID: "gma3.key", Source: targetGMA3, Label: "grandMA3: executor key (press/release)",
 		Help:        "Direct key presses on an executor: press (>0) / release (0) — ideal for toggle bindings.",
@@ -129,6 +137,20 @@ func flashPreset(params map[string]any) (config.ActionConfig, error) {
 		Address:        "/cmd",
 		Command:        fmt.Sprintf("Flash On Page %s.%s", page, exec),
 		ReleaseCommand: fmt.Sprintf("Flash Off Page %s.%s", page, exec),
+	}, nil
+}
+
+// tempPreset is the factory for gma3.temp — sends Temp On / Temp Off via /cmd.
+func tempPreset(params map[string]any) (config.ActionConfig, error) {
+	page, exec, err := pageExec(params)
+	if err != nil {
+		return config.ActionConfig{}, err
+	}
+	return config.ActionConfig{
+		Type:           config.ActionCommand,
+		Address:        "/cmd",
+		Command:        fmt.Sprintf("Temp On Page %s.%s", page, exec),
+		ReleaseCommand: fmt.Sprintf("Temp Off Page %s.%s", page, exec),
 	}, nil
 }
 

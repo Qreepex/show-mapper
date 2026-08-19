@@ -33,8 +33,9 @@ core stays console-agnostic and the binary works with or without this module.
 
 | preset | OSC message |
 |---|---|
-| `gma3.go` / `goback` / `pause` / `temp` / `on` / `off` | `/cmd` + string, e.g. `Go+ Page 1.201` |
+| `gma3.go` / `goback` / `pause` / `on` / `off` | `/cmd` + string, e.g. `Go+ Page 1.201` |
 | `gma3.flash` (momentary) | `/cmd` + string, `Flash On Page 1.201` (press) / `Flash Off Page 1.201` (release) |
+| `gma3.temp` (momentary) | `/cmd` + string, `Temp On Page 1.201` (press) / `Temp Off Page 1.201` (release) |
 | `gma3.cmd` | `/cmd` + your keyword line |
 | `gma3.key` (toggle/momentary) | `/Page<P>/Key<E>` int 1 (press) / 0 (release) |
 | `gma3.fader` | `/Page<P>/Fader<E>` int mapped through `range` (default 0..100) |
