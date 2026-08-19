@@ -17,11 +17,20 @@ all activity to the UI in realtime over WebSocket.
 Design goals, in order:
 
 0. **Core stays generic.** The top level knows *sources*, *targets*,
-   *bindings* - nothing about grandMA3, Akai, or Elgato. Every device- or
+   *bindings* — nothing about grandMA3, Akai, or Elgato. Every device- or
    console-specific thing (code + docs) lives inside a module directory.
-   The binary runs correctly with any subset - even zero - of modules
-   compiled in (connectors register via `init()`; inclusion is an import list
-   in `cmd/show-mapper/main.go`; removing a module = deleting one import).
+   **Module completeness rule:** the binary runs correctly with any subset —
+   even zero — of modules compiled in, and with any mix at runtime (e.g.
+   only `midi`, only `gma3`, or everything together). Modules register via
+   `init()`; inclusion is an import list in `cmd/show-mapper/main.go`
+   (**add a module = add one import; remove = delete one line**). We
+   deliberately use compile-time inclusion instead of dynamic
+   `.so`-style plugins: Go plugins don't work on Windows and break static
+   single-binary distribution. The compiled-in inventory is visible at
+   `/api/meta` (sourceTypes/targetTypes + presets per helper module); a
+   config referencing a *not*-compiled module type degrades that one
+   instance to an error status — everything else keeps running
+   (tests: internal/core/modules_test.go).
 1. **Modularity** - new sources and new targets are plugins implementing tiny
    interfaces, discovered by registries; the UI learns about them via
    `/api/meta`. No config schema surgery per connector.
