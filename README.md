@@ -27,8 +27,8 @@ compiled in; nothing device- or console-specific lives at the top level.
 
 1. Grab a release for your OS
    (`show-mapper_<ver>_windows_amd64.zip`, `_linux_amd64.tar.gz`,
-   `_linux_arm64.tar.gz`; darwin builds are currently paused) and extract it
-   anywhere — no installer.
+   `_linux_arm64.tar.gz`, `_darwin_amd64.tar.gz`, `_darwin_arm64.tar.gz`) and
+   extract it anywhere — no installer.
 2. Run it (`show-mapper.exe` / `./show-mapper`). On first start a minimal
    `show-mapper.yaml` is generated automatically next to it, and the web UI
    **opens in your browser automatically** (suppress with `-no-browser` or

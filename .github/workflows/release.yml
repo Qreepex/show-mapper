@@ -39,8 +39,22 @@ jobs:
               ext: ".exe",
               packaging: zip,
             }
-          # darwin (amd64/arm64) paused for now — re-add two entries here with
-          # os: macos-13 / macos-latest when a mac build is needed again.
+          - {
+              name: darwin-amd64,
+              os: macos-13,
+              goos: darwin,
+              goarch: amd64,
+              ext: "",
+              packaging: tar,
+            }
+          - {
+              name: darwin-arm64,
+              os: macos-latest,
+              goos: darwin,
+              goarch: arm64,
+              ext: "",
+              packaging: tar,
+            }
     steps:
       - uses: actions/checkout@v7
 
