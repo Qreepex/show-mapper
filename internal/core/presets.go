@@ -5,7 +5,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/yourorg/showbridge/internal/config"
+	"github.com/Qreepex/show-mapper/internal/config"
 )
 
 // ---------------------------------------------------------------------------
@@ -15,7 +15,7 @@ import (
 // "Helper modules" (internal/helpers/<name>) instead register ready-made
 // action builders — e.g. grandMA3 "Go/Flash/Temp/..." — which the UI offers as
 // presets and resolves server-side into a plain config.ActionConfig that is
-// stored in the binding. This keeps showbridge itself completely generic:
+// stored in the binding. This keeps show-mapper itself completely generic:
 // presets are sugar, never required.
 // ---------------------------------------------------------------------------
 

@@ -1,8 +1,8 @@
-// Package config defines the showbridge configuration file format,
+// Package config defines the show-mapper configuration file format,
 // loading, validation and persistence.
 //
-// The config is a single YAML file (default: ./showbridge.yaml or
-// $USER_CONFIG_DIR/showbridge/config.yaml). It is edited either by hand
+// The config is a single YAML file (default: ./show-mapper.yaml or
+// $USER_CONFIG_DIR/show-mapper/config.yaml). It is edited either by hand
 // or through the web UI (which PUTs to /api/config). The backend hot-reloads
 // connectors after a successful save.
 package config
@@ -258,18 +258,18 @@ func Default() Config {
 	}
 }
 
-// Candidates returns config file locations in probe order ($SHOWBRIDGE_CONFIG
+// Candidates returns config file locations in probe order ($SHOWMAPPER_CONFIG
 // wins over everything).
 func Candidates() []string {
 	out := []string{}
-	if p := os.Getenv("SHOWBRIDGE_CONFIG"); p != "" {
+	if p := os.Getenv("SHOWMAPPER_CONFIG"); p != "" {
 		out = append(out, p)
 	}
 	if wd, err := os.Getwd(); err == nil {
-		out = append(out, filepath.Join(wd, "showbridge.yaml"))
+		out = append(out, filepath.Join(wd, "show-mapper.yaml"))
 	}
 	if dir, err := os.UserConfigDir(); err == nil {
-		out = append(out, filepath.Join(dir, "showbridge", "config.yaml"))
+		out = append(out, filepath.Join(dir, "show-mapper", "config.yaml"))
 	}
 	return out
 }
@@ -297,7 +297,7 @@ func (f *File) Set(c Config) {
 }
 
 // Load finds and parses the config file. If none exists it returns an error
-// (main offers `showbridge config init` to create one).
+// (main offers `show-mapper config init` to create one).
 func Load() (*File, error) {
 	for _, p := range Candidates() {
 		data, err := os.ReadFile(p)
@@ -310,7 +310,7 @@ func Load() (*File, error) {
 		}
 		return &File{cfg: cfg, Path: p}, nil
 	}
-	return nil, fmt.Errorf("no config file found (looked in: %s) — run `showbridge config init`",
+	return nil, fmt.Errorf("no config file found (looked in: %s) — run `show-mapper config init`",
 		strings.Join(Candidates(), ", "))
 }
 
@@ -358,7 +358,7 @@ func (f *File) Save() error {
 	if err != nil {
 		return err
 	}
-	header := []byte("# showbridge configuration — see docs/architecture.md and showbridge.example.yaml\n")
+	header := []byte("# show-mapper configuration — see docs/architecture.md and show-mapper.example.yaml\n")
 	data = append(header, data...)
 
 	tmp := f.Path + ".tmp"
@@ -555,7 +555,7 @@ func (a ActionConfig) validate(where string) []error {
 }
 
 // MarshalYAML renders a config in the canonical hand-editable style
-// (2-space indents — the same style as showbridge.example.yaml, so
+// (2-space indents — the same style as show-mapper.example.yaml, so
 // hand-appended entries and app-saved files don't clash).
 func MarshalYAML(c *Config) ([]byte, error) {
 	var buf bytes.Buffer

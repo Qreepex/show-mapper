@@ -5,7 +5,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/yourorg/showbridge/internal/config"
+	"github.com/Qreepex/show-mapper/internal/config"
 )
 
 // ---------------------------------------------------------------------------

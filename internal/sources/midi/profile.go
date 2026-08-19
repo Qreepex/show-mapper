@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yourorg/showbridge/internal/core"
+	"github.com/Qreepex/show-mapper/internal/core"
 )
 
 // ---------------------------------------------------------------------------
@@ -12,7 +12,7 @@ import (
 //
 // A profile maps hardware notes/CCs to meaningful control IDs + labels and
 // describes LED capabilities. This is data, not code — new boards are added
-// here after verifying note/CC numbers with `showbridge midi monitor`.
+// here after verifying note/CC numbers with `show-mapper midi monitor`.
 // See docs/midi-devices.md ("Adding a new device").
 // ---------------------------------------------------------------------------
 

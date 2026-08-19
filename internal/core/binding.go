@@ -3,7 +3,7 @@ package core
 import (
 	"math"
 
-	"github.com/yourorg/showbridge/internal/config"
+	"github.com/Qreepex/show-mapper/internal/config"
 )
 
 // This file resolves config.Bindings into concrete Actions.

@@ -1,10 +1,10 @@
-# AGENTS.md — working agreement for AI agents & contributors in this repo
+# AGENTS.md - working agreement for AI agents & contributors in this repo
 
 Read this before touching code. Deeper background lives in `docs/architecture.md`.
 
 ## What this is
 
-`showbridge`: a Go backend that bridges control surfaces (MIDI boards now,
+`show-mapper`: a Go backend that bridges control surfaces (MIDI boards now,
 Stream Decks next) to show-software targets (grandMA3 over OSC now; ArtNet/
 sACN + timecode later), with an embedded Svelte 5 web UI (SPA) for realtime
 configuration. Everything is config-file driven; the UI edits the same file
@@ -13,7 +13,7 @@ via `PUT /api/config`.
 ## Commands (Makefile is the source of truth)
 
 | Task | Command | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Build (full, MIDI) | `make build` | needs C/C++ toolchain (RtMidi is C++) |
 | Build (fast, no MIDI) | `make build-nocgo` | `CGO_ENABLED=0`, works everywhere |
 | Run backend | `make run` | serves :8080; placeholder UI until `make web` |
@@ -31,17 +31,17 @@ CI runs: `go vet`, `go test`, `go build` (CGO off), `npm run check`, `npm run bu
    names in core code, core docs, or top-level README. Every module
    (`internal/sources/<x>`, `internal/targets/<x>`, `internal/helpers/<x>`)
    carries its **own** README.md. The app must boot with zero modules
-   compiled; removing a module = deleting one import in `cmd/showbridge/main.go`.
+   compiled; removing a module = deleting one import in `cmd/show-mapper/main.go`.
 1. **`internal/core` owns the domain model and must not import connectors.**
    Sources/targets register via `core.RegisterSource/RegisterTarget` from their
-   package `init()`; `cmd/showbridge/main.go` imports connectors (one blank
+   package `init()`; `cmd/show-mapper/main.go` imports connectors (one blank
    import per connector).
 2. **Connector packages are self-contained**: `internal/sources/<type>`,
    `internal/targets/<type>`. No cross-imports between connectors.
 3. **Hardware access is build-tagged.** Anything needing a C/C++ stack
    (RtMidi: `driver_cgo.go`) has a `driver_nocgo.go` twin so
    `CGO_ENABLED=0 go build ./... && go test ./...` *always* works. The stub
-   returns a **permanent** error (`core.PermanentError`) — the conductor then
+   returns a **permanent** error (`core.PermanentError`) - the conductor then
    reports instead of retry-looping.
 4. **Config is validated twice**: structurally in `config.Validate()` and at
    instance creation (unknown connector/profile → per-instance `error`
@@ -58,7 +58,7 @@ CI runs: `go vet`, `go test`, `go build` (CGO off), `npm run check`, `npm run bu
 - **Svelte 5 runes only**: `$state`, `$derived`, `$effect`, `$props()`.
   Forbidden: `$:` statements, `export let`, `on:click` directives (use
   `onclick={...}`), `createEventDispatcher`, `<slot>` for new components
-  (use `{#snippet}`/`{@render}`), svelte stores (`writable/derived`) — shared
+  (use `{#snippet}`/`{@render}`), svelte stores (`writable/derived`) - shared
   state lives in `.svelte.ts` modules with runes (see `web/src/lib/ws.svelte.ts`).
 - `$app/state`, not `$app/stores`.
 - svelte-check (`npm run check`) must pass with **0 errors/warnings**.
@@ -80,34 +80,39 @@ CI runs: `go vet`, `go test`, `go build` (CGO off), `npm run check`, `npm run bu
 ## Common recipes
 
 ### Add a target connector (e.g. ArtNet/sACN)
+
 1. Create `internal/targets/<type>/` implementing `core.Target`
    (`ID/Type/Connect/Send/Close/Status`) + a module README.md.
 2. In `init()`: `core.RegisterTarget("<type>", core.TypeInfo{...options schema...}, NewTarget)`.
-3. Blank-import it in `cmd/showbridge/main.go`.
+3. Blank-import it in `cmd/show-mapper/main.go`.
 4. Decide how `core.Action` maps to your protocol (extend `ActionConfig` in
-   `internal/config` if you need new semantics — update `Validate`,
+   `internal/config` if you need new semantics - update `Validate`,
    `ActionTypes`, tests, `make types`, docs).
 5. Tests + docs/architecture.md “Connectors” table + README status table.
 
 ### Add an action-preset helper module (e.g. a new console family)
+
 1. Create `internal/helpers/<name>/` with an `init()` calling
    `core.RegisterActionPreset(...)` per preset + README.md with the console
    setup instructions.
 2. Blank-import in `main.go`. The UI picks it up automatically via `/api/meta`.
    Working example: `internal/helpers/gma3`.
 
-### Add a source connector (e.g. Elgato Stream Deck) — next planned
+### Add a source connector (e.g. Elgato Stream Deck) - next planned
+
 See docs/architecture.md#adding-a-source for the full checklist incl.
 HID/CGO strategy, profiles, feedback (`core.FeedbackSink` already supports
 `Text`/`Icon` for display keys), and the inspector hook
 (`core.RegisterInspector` → `GET /api/sources/<type>/inspect`).
 
 ### Add / fix a built-in MIDI board profile
-Follow docs/midi-devices.md#adding-a-new-device — **verify against hardware**
-with `showbridge midi monitor` before merging; mark unverified data with
+
+Follow docs/midi-devices.md#adding-a-new-device - **verify against hardware**
+with `show-mapper midi monitor` before merging; mark unverified data with
 `TODO(hardware)` like `apcMini()` does.
 
 ### Change the WS/REST contract
+
 Update `docs/protocols.md` + the Go structs + `make types` in the same PR.
 
 ## Naming conventions (summary; full list in architecture.md §Naming)
@@ -116,18 +121,18 @@ Update `docs/protocols.md` + the Go structs + `make types` in the same PR.
 - Connector type names: lowercase (`midi`, `osc`, `artnet`, `streamdeck`).
 - WS types: `<domain>.<action>` (`source.event`, `target.action`,
   `connector.status`, `state.snapshot`, `config.updated`, `client.*` reserved).
-- Tags: `v<semver>`; release artifacts `showbridge_<ver>_<os>_<arch>.{zip,tar.gz}`.
+- Tags: `v<semver>`; release artifacts `show-mapper_<ver>_<os>_<arch>.{zip,tar.gz}`.
 - Commits: conventional (`feat(scope): …`); scopes: midi|osc|core|server|web|ci|docs.
 
 ## Gotchas collection
 
 - `internal/server/dist/index.html` + `200.html` are committed placeholders by
   design (fresh-clone `go build` must embed *something*). Real web builds
-  overwrite them — **do not commit web build output** (`.gitignore` handles
+  overwrite them - **do not commit web build output** (`.gitignore` handles
   assets; if git tracks a rebuilt placeholder, restore it).
 - Windows + WinMM: a MIDI port can be opened by only one process at a time.
-  If `showbridge` can't see presses, close other tools (DawControl, DAWs, browsers).
-- RtMidi port enumeration is static — hot-plug shows up after the conductor's
+  If `show-mapper` can't see presses, close other tools (DawControl, DAWs, browsers).
+- RtMidi port enumeration is static - hot-plug shows up after the conductor's
   5 s reconnect cycle, not instantly.
 - No CGO on your machine? Everything except MIDI hardware works; tests/CI
   default to `CGO_ENABLED=0`.

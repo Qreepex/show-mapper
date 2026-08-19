@@ -3,7 +3,7 @@ package midi
 import (
 	"fmt"
 
-	"github.com/yourorg/showbridge/internal/core"
+	"github.com/Qreepex/show-mapper/internal/core"
 )
 
 // ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ func apcMiniMk2() *Profile {
 // ---------------------------------------------------------------------------
 // Akai APC mini (mk1) — community-documented mapping.
 // TODO(hardware): verify bottom-row/scene note numbers and LED velocity
-// palette against a real device using `showbridge midi monitor`;
+// palette against a real device using `show-mapper midi monitor`;
 // see docs/midi-devices.md#adding-a-new-device.
 // ---------------------------------------------------------------------------
 

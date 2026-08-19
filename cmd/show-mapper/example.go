@@ -1,9 +1,9 @@
 package main
 
-// exampleConfig is written by `showbridge config init`.
-// Keep it in sync with showbridge.example.yaml at the repo root and with
+// exampleConfig is written by `show-mapper config init`.
+// Keep it in sync with show-mapper.example.yaml at the repo root and with
 // config struct field names (both are YAML-marshaled from config.Config).
-const exampleConfig = `# showbridge configuration — full annotated version: showbridge.example.yaml (repo root)
+const exampleConfig = `# show-mapper configuration — full annotated version: show-mapper.example.yaml (repo root)
 # Docs: docs/architecture.md • MIDI boards: docs/midi-devices.md • grandMA3: internal/helpers/gma3/README.md
 
 version: 1
@@ -18,7 +18,7 @@ sources:
     type: midi
     profile: apc-mini-mk2     # built-in board layout; see docs/midi-devices.md
     options:
-      device: APC mini mk2    # substring of the OS port name (showbridge midi list)
+      device: APC mini mk2    # substring of the OS port name (show-mapper midi list)
 
 # --- Targets: where actions go ----------------------------------------------
 targets:

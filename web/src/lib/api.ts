@@ -1,4 +1,4 @@
-// Thin REST client for the showbridge API (see docs/protocols.md).
+// Thin REST client for the show-mapper API (see docs/protocols.md).
 import type { ActionConfig, Config, ConnectorState, Meta, UpdateStatus } from "./types";
 
 export class ApiError extends Error {

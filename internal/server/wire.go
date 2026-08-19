@@ -3,8 +3,8 @@ package server
 import (
 	"time"
 
-	"github.com/yourorg/showbridge/internal/config"
-	"github.com/yourorg/showbridge/internal/core"
+	"github.com/Qreepex/show-mapper/internal/config"
+	"github.com/Qreepex/show-mapper/internal/core"
 )
 
 // Wire-format types shared with the frontend. This file is the only part of

@@ -2,7 +2,7 @@
 // action presets (Go, Go-, Pause, Flash, Temp, On, Off, executor key/fader)
 // that resolve into plain OSC actions for the generic "osc" target.
 //
-// IMPORTANT (project rule): showbridge core stays console-agnostic — nothing
+// IMPORTANT (project rule): show-mapper core stays console-agnostic — nothing
 // about grandMA3 lives outside this directory (code AND docs, see README.md
 // here). The software runs with or without this module compiled in.
 package gma3
@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yourorg/showbridge/internal/config"
-	"github.com/yourorg/showbridge/internal/core"
+	"github.com/Qreepex/show-mapper/internal/config"
+	"github.com/Qreepex/show-mapper/internal/core"
 )
 
 // Address conventions are documented in README.md (console-side OSC setup).

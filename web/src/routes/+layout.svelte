@@ -22,7 +22,7 @@
 </script>
 
 <nav class="top">
-  <strong>showbridge</strong>
+  <strong>show-mapper</strong>
   {#each routes as r (r.href)}
     <a href={r.href} class:active={page.url.pathname === r.href}>{r.label}</a>
   {/each}

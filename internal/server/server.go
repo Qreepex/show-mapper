@@ -16,10 +16,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourorg/showbridge/internal/config"
-	"github.com/yourorg/showbridge/internal/core"
-	"github.com/yourorg/showbridge/internal/updater"
-	"github.com/yourorg/showbridge/internal/version"
+	"github.com/Qreepex/show-mapper/internal/config"
+	"github.com/Qreepex/show-mapper/internal/core"
+	"github.com/Qreepex/show-mapper/internal/updater"
+	"github.com/Qreepex/show-mapper/internal/version"
 )
 
 // Server wires HTTP routes to the config store and the conductor.
@@ -179,7 +179,7 @@ func (s *Server) handleExportConfig(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/yaml; charset=utf-8")
-	w.Header().Set("Content-Disposition", `attachment; filename="showbridge.yaml"`)
+	w.Header().Set("Content-Disposition", `attachment; filename="show-mapper.yaml"`)
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)
 }
@@ -285,7 +285,7 @@ func (s *Server) handleUpdateApply(w http.ResponseWriter, _ *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok":      true,
-		"message": fmt.Sprintf("updated to %s — restart showbridge to run the new version (on Windows a showbridge.old.exe may remain; safe to delete)", cached.LatestVersion),
+		"message": fmt.Sprintf("updated to %s — restart show-mapper to run the new version (on Windows a show-mapper.old.exe may remain; safe to delete)", cached.LatestVersion),
 	})
 }
 

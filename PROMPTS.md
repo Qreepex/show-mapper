@@ -1,7 +1,3 @@
-Name the tool <https://github.com/Qreepex/show-mapper> for now
-
---
-
 There should be a generic configurable OSC target that can send OSC anywhere. There should also be a ready configured OSC for grandma3 that has easy helpers for the grandma3 commands like flash, temp, go, on off etc which the users use instead of writing raw commands to send via OSC.
 When configuring the sources, the users creates an instance of that source for example grandma3 console XY and then configures the IP, port etc for the OSC protocol and then can reuse that source intance for mapping and doesnt have to configure IP etc when mapping every single button on the board.
 There should be no top level grandma3 code or documentation since its solely one of the modules that can be used within the software. All code and documentation of that module should be within the module. The software at the top level should be completely generic.

@@ -1,13 +1,13 @@
 # API & realtime protocol
 
 Base URL: same as the UI (default `http://127.0.0.1:8080`). Everything is JSON.
-The web UI in `web/` uses exactly these endpoints — treat this file as the
+The web UI in `web/` uses exactly these endpoints - treat this file as the
 contract; change code + types (`web/src/lib/types.ts`) + this doc together.
 
 ## REST
 
 | Method | Path | Body → Response | Purpose |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | GET | `/api/health` | → `{ok, version, clients}` | liveness + ws client count |
 | GET | `/api/meta` | → `{version, commit, sourceTypes[], targetTypes[], triggers, modes, actionTypes, controlKinds, ledStyles, presets[], customProfiles}` | everything the UI needs to render schema-agnostically (`presets` = helper-module action presets) |
 | GET | `/api/config` | → `Config` | current config |
@@ -36,7 +36,7 @@ contract; change code + types (`web/src/lib/types.ts`) + this doc together.
 ### Server → client message types
 
 | type | data | when |
-|---|---|---|
+| --- | --- | --- |
 | `state.snapshot` | `{version, commit, connectors[], config}` | once after connect |
 | `source.event` | `{source, control, kind: pressed\|released\|value, value: 0..1, raw, when}` | every physical control change (incl. unmapped `note:N`/`cc:N`) |
 | `target.action` | `{binding, ok, error?, action{target, kind, address, args}}` | after each dispatched action (ok=false on send failure) |
@@ -74,7 +74,7 @@ jq '.bindings += [{source:"wing", control:"pad-0-0", trigger:"pressed",
   target:"ma3", action:{type:"command", address:"/cmd", command:"Go Executor 1.201"}}]' \
   cfg.json > cfg2.json
 curl -X PUT -H 'Content-Type: application/json' --data @cfg2.json \
-  http://127.0.0.1:8080/api/config   # → {"ok":true} — live-reloaded
+  http://127.0.0.1:8080/api/config   # → {"ok":true} - live-reloaded
 # watch:
 wscat -c ws://127.0.0.1:8080/ws
 ```

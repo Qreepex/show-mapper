@@ -8,7 +8,7 @@ configured GitHub repository for a newer release and (on explicit user
 action) download + install it in place. Pure Go, no CGO.
 
 The release asset names produced by .github/workflows/release.yml
-(showbridge_<ver>_<os>_<arch>.* + checksums.txt) are discovered and
+(show-mapper_<ver>_<os>_<arch>.* + checksums.txt) are discovered and
 checksum-verified by github.com/rhysd/go-github-selfupdate.
 
 The feature activates only when `updates.repo` ("owner/name") is set in the

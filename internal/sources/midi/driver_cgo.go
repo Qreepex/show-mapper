@@ -73,7 +73,7 @@ func (rtHW) Open(match string, onMessage func(data []byte)) (Conn, error) {
 		return nil, err
 	}
 
-	in, err := rtmidi.NewMIDIIn(rtmidi.APIUnspecified, "showbridge", 1024)
+	in, err := rtmidi.NewMIDIIn(rtmidi.APIUnspecified, "show-mapper", 1024)
 	if err != nil {
 		return nil, fmt.Errorf("creating MIDI input: %w", err)
 	}
@@ -88,7 +88,7 @@ func (rtHW) Open(match string, onMessage func(data []byte)) (Conn, error) {
 		in.Destroy()
 		return nil, err
 	}
-	if err := in.OpenPort(inIdx, "showbridge"); err != nil {
+	if err := in.OpenPort(inIdx, "show-mapper"); err != nil {
 		in.Destroy()
 		return nil, fmt.Errorf("opening input %q: %w", inName, err)
 	}
@@ -98,7 +98,7 @@ func (rtHW) Open(match string, onMessage func(data []byte)) (Conn, error) {
 	// Output is optional (needed for LED feedback / sysex handshake).
 	if outIdx, outName, err := findOutPort(match); err == nil {
 		if out, err := rtmidi.NewMIDIOutDefault(); err == nil {
-			if err := out.OpenPort(outIdx, "showbridge"); err == nil {
+			if err := out.OpenPort(outIdx, "show-mapper"); err == nil {
 				c.out = out
 				c.outName = outName
 			} else {

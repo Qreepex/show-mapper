@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourorg/showbridge/internal/config"
-	"github.com/yourorg/showbridge/internal/core"
+	"github.com/Qreepex/show-mapper/internal/config"
+	"github.com/Qreepex/show-mapper/internal/core"
 )
 
 func init() {
@@ -19,7 +19,7 @@ func init() {
 				Name:  "device",
 				Label: "Device name",
 				Type:  "text",
-				Help:  "Case-insensitive substring of the MIDI port name, e.g. \"APC mini mk2\". Leave empty to use the profile's default match. List available ports with `showbridge midi list` or GET /api/sources/midi/inspect.",
+				Help:  "Case-insensitive substring of the MIDI port name, e.g. \"APC mini mk2\". Leave empty to use the profile's default match. List available ports with `show-mapper midi list` or GET /api/sources/midi/inspect.",
 			},
 		},
 		Profiles: Profiles(),
@@ -34,7 +34,7 @@ type PortList struct {
 }
 
 // InspectPorts enumerates MIDI ports (used by GET /api/sources/midi/inspect
-// and `showbridge midi list`). Fails with ErrNoCGO in non-CGO builds.
+// and `show-mapper midi list`). Fails with ErrNoCGO in non-CGO builds.
 func InspectPorts() (any, error) {
 	hw, err := NewHW()
 	if err != nil {

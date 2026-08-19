@@ -1,6 +1,6 @@
 # =============================================================================
-# showbridge — full annotated example configuration
-# Copy to "showbridge.yaml" and edit. `showbridge config init` writes a shorter
+# show-mapper — full annotated example configuration
+# Copy to "show-mapper.yaml" and edit. `show-mapper config init` writes a shorter
 # starter version. Schema reference: docs/architecture.md #configuration-model
 # =============================================================================
 
@@ -13,17 +13,17 @@ http:
   listen: 127.0.0.1:8080
 
 # --- Self-update (optional) ----------------------------------------------------
-# Checks this GitHub repo's releases for a newer showbridge build; the UI shows
+# Checks this GitHub repo's releases for a newer show-mapper build; the UI shows
 # a banner and can download+install (checksum-verified) in place.
 # updates:
-#   repo: owner/repo        # e.g. yourname/showbridge — empty = feature off
+#   repo: owner/repo        # e.g. Qreepex/show-mapper — empty = feature off
 #   autoCheck: false        # check on startup
 
 # --- Custom boards (user-defined device profiles) -----------------------------
 # Built-ins ship with the binary (MIDI: apc-mini-mk2, apc-mini).
 # Any other board can be described here in YAML or via the UI (Settings →
 # Custom boards). Find note/CC numbers on the Dashboard ticker or via
-# `showbridge midi monitor <device>`. Details: docs/midi-devices.md#custom-boards
+# `show-mapper midi monitor <device>`. Details: docs/midi-devices.md#custom-boards
 profiles:
   - id: my-x-touch
     type: midi                        # connector type the profile belongs to
@@ -45,7 +45,7 @@ sources:
     profile: apc-mini-mk2             # built-in or custom profile id
     options:
       device: APC mini mk2            # case-insensitive substring of the OS port
-                                      # name. `showbridge midi list` shows names.
+                                      # name. `show-mapper midi list` shows names.
                                       # Omit to use the profile's default match.
 
 # --- Targets (where actions go) -------------------------------------------------

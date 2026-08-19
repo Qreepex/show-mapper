@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourorg/showbridge/internal/config"
+	"github.com/Qreepex/show-mapper/internal/config"
 )
 
 func TestScaleFader(t *testing.T) {

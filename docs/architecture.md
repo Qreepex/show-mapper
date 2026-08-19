@@ -1,14 +1,14 @@
-# showbridge — Architecture & Build Plan
+# show-mapper - Architecture & Build Plan
 
 This is the system design. Read it before extending the code. Related:
 [midi-devices.md](midi-devices.md) · [protocols.md](protocols.md) ·
 [releasing.md](releasing.md) · module docs live in their module dirs
-(e.g. [../internal/helpers/gma3/README.md](../internal/helpers/gma3/README.md)).
+(e.g. [../internal/helpers/gma3/README.md](../internal/helpers/gma3/README.md))
 ---
 
 ## 1. What & why
 
-`showbridge` bridges **control surfaces** (MIDI boards today; Elgato Stream
+`show-mapper` bridges **control surfaces** (MIDI boards today; Elgato Stream
 Deck next; more later) to **live-event software** (grandMA3 via OSC today;
 ArtNet/sACN and timecode later). It runs as a single binary on a show laptop
 (Windows/macOS/Linux), hosts a local web UI for configuration, and streams
@@ -17,20 +17,20 @@ all activity to the UI in realtime over WebSocket.
 Design goals, in order:
 
 0. **Core stays generic.** The top level knows *sources*, *targets*,
-   *bindings* — nothing about grandMA3, Akai, or Elgato. Every device- or
+   *bindings* - nothing about grandMA3, Akai, or Elgato. Every device- or
    console-specific thing (code + docs) lives inside a module directory.
-   The binary runs correctly with any subset — even zero — of modules
+   The binary runs correctly with any subset - even zero - of modules
    compiled in (connectors register via `init()`; inclusion is an import list
-   in `cmd/showbridge/main.go`; removing a module = deleting one import).
-1. **Modularity** — new sources and new targets are plugins implementing tiny
+   in `cmd/show-mapper/main.go`; removing a module = deleting one import).
+1. **Modularity** - new sources and new targets are plugins implementing tiny
    interfaces, discovered by registries; the UI learns about them via
    `/api/meta`. No config schema surgery per connector.
-2. **Boring reliability** — show context: simple, single binary, no external
+2. **Boring reliability** - show context: simple, single binary, no external
    services, explicit retry behavior, nothing panics because a USB cable fell out.
-3. **Single-file distribution** — frontend embedded via `go:embed`; one config
+3. **Single-file distribution** - frontend embedded via `go:embed`; one config
    file; zero installers. Portable: extract-and-run on Windows, macOS, Linux;
    amd64 + arm64.
-4. **Hackable** — plain Go, no framework magic; Svelte 5 SPA you can reason
+4. **Hackable** - plain Go, no framework magic; Svelte 5 SPA you can reason
    about; frontend/backend wire types are generated, not hand-mirrored.
 
 Non-goals (v1): multi-user auth, distributed operation, playlists/cue stacks,
@@ -44,7 +44,7 @@ MIDI routing between apps.
             USB (class-compliant, no vendor drivers)                show network
 ┌─────────────────────┐                      ┌──────────────────────────────────────┐
 │  Akai APC mini mk2  │                      │                                      │      ┌─────────────────────┐
-│  custom MIDI boards │── Source events ──►  │            showbridge                │─────►│  grandMA3 (OSC/UDP) │
+│  custom MIDI boards │── Source events ──►  │            show-mapper                │─────►│  grandMA3 (OSC/UDP) │
 │  Stream Deck (soon) │                      │  ┌────────────┐   ┌───────────────┐  │      └─────────────────────┘
 └─────────────────────┘                      │  │  sources/  │──►│  conductor    │  │      ┌─ ArtNet/sACN (soon) │
                                              │  │  midi      │   │  (dispatcher) │  │────X │  timecode (soon)    │
@@ -73,7 +73,7 @@ so board state can mirror console state.
 ## 3. Core domain model (`internal/core`)
 
 | Concept | Type | Meaning |
-|---|---|---|
+| --- | --- | --- |
 | Event | `core.Event{SourceID, Control, Kind, Value0..1, Raw, When}` | something happened on a control. Kinds: `pressed`, `released`, `value` |
 | Action | `core.Action{BindingID, TargetID, Kind, Address, Args}` | resolved send-order to a target. Targets see **only** actions |
 | Source | interface `Connect/Close/Events/Status/ID/Type/Controls` | event producer; `Events()` is a buffered channel owned by the source |
@@ -105,35 +105,35 @@ CGO) → marked error, no retry (`core.PermanentError`).
 
 ## 4. Configuration model
 
-One YAML file (`showbridge.yaml`; search order: `$SHOWBRIDGE_CONFIG` →
-`./showbridge.yaml` → `$UserConfigDir/showbridge/config.yaml`; `-config` flag
+One YAML file (`show-mapper.yaml`; search order: `$SHOWMAPPER_CONFIG` →
+`./show-mapper.yaml` → `$UserConfigDir/show-mapper/config.yaml`; `-config` flag
 overrides). Edited by hand or via the UI; saving through the UI validates,
 persists atomically (tmp+rename, `.bak` kept), broadcasts `config.updated`,
 and hot-reloads all connectors.
 
-Sections (full annotated version: [../showbridge.example.yaml](../showbridge.example.yaml)):
+Sections (full annotated version: [../show-mapper.example.yaml](../show-mapper.example.yaml)):
 
-- `http.listen` — UI/API bind (default `127.0.0.1:8080`, **no auth yet**).
-- `profiles[]` — **user-defined device profiles** ("custom boards"). Built-ins
+- `http.listen` - UI/API bind (default `127.0.0.1:8080`, **no auth yet**).
+- `profiles[]` - **user-defined device profiles** ("custom boards"). Built-ins
   ship in code; this is where users describe any other hardware. Each entry
   has a connector `type` (`midi`, later `streamdeck`) + match patterns +
   per-control addressing + LED style.
-- `sources[]` — `{id, type, profile?, options{...type-specific...}}`.
-- `targets[]` — `{id, type, options{...}}`.
-- `bindings[]` — see §3; `id` optional (derived), control ids come from the
+- `sources[]` - `{id, type, profile?, options{...type-specific...}}`.
+- `targets[]` - `{id, type, options{...}}`.
+- `bindings[]` - see §3; `id` optional (derived), control ids come from the
   source's profile (or raw discoveries like `note:36` / `cc:10`, emitted by
-  unmapped controls — the poor-man's MIDI learn).
+  unmapped controls - the poor-man's MIDI learn).
 
 Validation rules are centralized in `internal/config` (`Validate`) and the
 lists exposed via `/api/meta` keep the UI schema-agnostic.
 
-**Config lifecycle:** one portable YAML — copy it machine→machine as-is.
+**Config lifecycle:** one portable YAML - copy it machine→machine as-is.
 Every apply path validates → persists atomically → hot-reloads connectors:
 (a) UI save (`PUT /api/config`), (b) full YAML import/export via UI
 (`POST /api/config/import`, `GET /api/config/export`), (c) hand edits of the
 file itself (fsnotify watcher, debounced, de-duplicated against our own
-saves). Saved YAML is normalized to 2-space indentation — same style as the
-examples — so hand-written entries never fight the writer’s formatting.
+saves). Saved YAML is normalized to 2-space indentation - same style as the
+examples - so hand-written entries never fight the writer’s formatting.
 
 ---
 
@@ -142,8 +142,8 @@ examples — so hand-written entries never fight the writer’s formatting.
 ### 5.1 Registries
 
 `core.RegisterSource(type, TypeInfo, factory)` /
-`core.RegisterTarget(type, TypeInfo, factory)` — called from each connector
-package's `init()`; `cmd/showbridge/main.go` imports connectors explicitly
+`core.RegisterTarget(type, TypeInfo, factory)` - called from each connector
+package's `init()`; `cmd/show-mapper/main.go` imports connectors explicitly
 (listed there). `TypeInfo` includes the **option field schema**
 (`[]FieldSpec`) so the Settings UI renders forms it knows nothing about.
 
@@ -155,18 +155,18 @@ modules** under `internal/helpers/<name>` that register **action presets**
 (`core.RegisterActionPreset`). Presets are authoring-time sugar: the UI lists
 them via `/api/meta`, the user fills the preset's fields, and
 `POST /api/presets/resolve` turns them into a plain `config.ActionConfig`
-stored in the binding — core never sees vendor concepts and presets have zero
+stored in the binding - core never sees vendor concepts and presets have zero
 runtime cost. Project rule: all module-specific code *and documentation* live
 inside the module dir (example: `internal/helpers/gma3/README.md`).
 
-### 5.2 Adding a source — checklist (worked example: **Stream Deck**, the planned next step)
+### 5.2 Adding a source - checklist (worked example: **Stream Deck**, the planned next step)
 
 1. New package `internal/sources/streamdeck` implementing `core.Source`.
    Key events (`pressed`/`released`) fit today; Stream Deck Plus dials →
    `value` events; pedal → pressed/released.
 2. Hardware: Stream Decks are **USB HID** devices (not MIDI, not
    class-audio). Go access via hidapi bindings (e.g. `sstallion/go-hid` /
-   `karalabe/hid` or the `magicmonkey/go-streamdeck` helper lib — evaluate
+   `karalabe/hid` or the `magicmonkey/go-streamdeck` helper lib - evaluate
    maintenance + license, then pick). These need CGO → **same pattern as
    MIDI**: `hid_cgo.go` (+ real impl) and `hid_nocgo.go` (stub returning
    `core.PermanentError`). CI matrix already installs toolchains per OS;
@@ -174,18 +174,18 @@ inside the module dir (example: `internal/helpers/gma3/README.md`).
 3. Profiles per model (`streamdeck-mini|mk2|xl|pedal|plus`): key count/grid +
    image size (mk2: 15 keys @72×72). Same `Profile` concept as MIDI; the
    config `profiles:` section already supports user-defined ones by `type`.
-4. Feedback: implement `core.FeedbackSink` — toggle state can later render
+4. Feedback: implement `core.FeedbackSink` - toggle state can later render
    `Text`/`Icon` onto key LCDs (the interface fields already exist);
    conductor needs no changes.
 5. Discovery: `core.RegisterInspector("streamdeck", ...)` enumerating
    attached decks → `GET /api/sources/streamdeck/inspect` + UI picker comes free.
 6. Tests, docs tables, README status row, example YAML snippet.
 
-### 5.3 Adding a target — checklist (worked example: ArtNet/sACN)
+### 5.3 Adding a target - checklist (worked example: ArtNet/sACN)
 
 1. `internal/targets/artnet|sacn` implementing `core.Target`; map
    `core.Action` to channel/value semantics. Likely fields to add to
-   `config.ActionConfig`: universe/channel addressing — see TODO note in the
+   `config.ActionConfig`: universe/channel addressing - see TODO note in the
    file; bumping `ActionTypes` flows into UI automatically via `/api/meta`.
 2. Library candidates: `github.com/jsimonetti/go-artnet`,
    `github.com/Hundemeier/go-sacn` (evaluate freshness; both pure Go).
@@ -196,22 +196,22 @@ inside the module dir (example: `internal/helpers/gma3/README.md`).
 ### 5.4 Network plan (answers "interfaces must be configurable")
 
 - **OSC (now):** per-target `host`, `port`, `prefix`. (MA3 quirk: each OSC row
-  uses one port for both directions — see internal/helpers/gma3/README.md.)
+  uses one port for both directions - see internal/helpers/gma3/README.md.)
 - **ArtNet/sACN (plan):** per-target `interface` (local NIC IP to bind),
   `universe`, unicast destination vs broadcast/multicast, TTL/priority. UI
   will offer a NIC dropdown via an inspector on the target side (inspector is
-  currently source-only — extend symmetrically when needed).
+  currently source-only - extend symmetrically when needed).
 - **Firewall cheat sheet (docs for users):** OSC commonly UDP 8000/9000,
-  Art-Net UDP 6454, sACN UDP 5568, showbridge UI TCP 8080.
+  Art-Net UDP 6454, sACN UDP 5568, show-mapper UI TCP 8080.
 
 ### 5.5 MIDI specifics
 
 Driver question, answered fully in [midi-devices.md](midi-devices.md):
-**no vendor drivers** — class-compliant devices + OS stacks (WinMM/CoreMIDI/
+**no vendor drivers** - class-compliant devices + OS stacks (WinMM/CoreMIDI/
 ALSA) via the bundled RtMidi binding. CGO is required; the build system
 handles it (`!cgo` stub keeps dev/CI simple). Per-board support = *profiles*,
 either built-in (verified with hardware) or user-defined custom boards from
-config/UI — the same runtime `Profile` object is built from both sources.
+config/UI - the same runtime `Profile` object is built from both sources.
 
 ---
 
@@ -225,14 +225,14 @@ config/UI — the same runtime `Profile` object is built from both sources.
   fallback `200.html`. Build output lands in `internal/server/dist/` and is
   embedded by `go:embed`. Committed placeholders let plain `go build` work
   on a fresh clone; CI builds the SPA first.
-- **Realtime state**: `web/src/lib/ws.svelte.ts` — a runes class mirroring
+- **Realtime state**: `web/src/lib/ws.svelte.ts` - a runes class mirroring
   connection state, snapshot, connector statuses and the event ticker;
   auto-reconnect with backoff.
 - **Routes**: `/` dashboard (connectors, MIDI discovery, live ticker),
   `/mappings` (bindings editor incl. action presets + control picker from
   profile metadata with free-text raw `note:N`/`cc:N` escapes), `/settings`
   (HTTP, sources, targets, custom board editor, config import/export).
-- Dev loop: `vite dev` on :5173 proxies `/api` + `/ws` → :8080 — no CORS,
+- Dev loop: `vite dev` on :5173 proxies `/api` + `/ws` → :8080 - no CORS,
   no origin juggling.
 
 ---
@@ -266,7 +266,7 @@ CGO is unavoidable for real device I/O (RtMidi C++). Therefore:
 ## 9. Security model (v1)
 
 Trusted-show-network assumption. The HTTP server defaults to localhost; when
-bound to LAN it is **unauthenticated** — firewalls/NIC choice are the
+bound to LAN it is **unauthenticated** - firewalls/NIC choice are the
 boundary (documented for users). OSC/ArtNet/sACN are unauthenticated
 protocols by nature. Auth (session token), TLS, and per-IP rules are roadmap
 items, deliberately flagged rather than done half-heartedly.
@@ -276,18 +276,18 @@ items, deliberately flagged rather than done half-heartedly.
 ## 10. Naming conventions
 
 | Thing | Convention | Examples |
-|---|---|---|
-| Module path | `github.com/yourorg/showbridge` (placeholder, rename early) | — |
-| Binary / config file | `showbridge` / `showbridge.yaml` | |
+| --- | --- | --- |
+| Module path | `github.com/Qreepex/show-mapper` (placeholder, rename early) | - |
+| Binary / config file | `show-mapper` / `show-mapper.yaml` | |
 | Go packages | lowercase singular; connectors `sources/<type>`, `targets/<type>` | `internal/sources/midi` |
 | Connector types | lowercase keyword | `midi`, `osc`, `streamdeck`, `artnet`, `sacn`, `timecode-*` |
 | Instance ids (sources/targets/profiles/bindings) | `[a-z0-9][a-z0-9-]*` | `wing-left`, `ma3`, `apc-mini-mk2` |
 | Control ids | profile-defined kebab-case; pads are zero-based `pad-<row>-<col>` (row 0 = bottom, Akai note numbering) | `pad-0-3`, `fader-1`, `button-scene-2`, `fader-master`; raw discoveries `note:36`, `cc:10` |
-| Triggers / modes / actions | fixed enums | `pressed|released|hold|value`, `momentary|toggle`, `command|value|fader` |
+| Triggers / modes / actions | fixed enums | `pressed | released | hold | value`,`momentary | toggle`,`command | value | fader` |
 | WS message types | `<domain>.<action>` | `state.snapshot`, `source.event`, `target.action`, `connector.status`, `config.updated`; client→server reserved `client.*` |
 | REST | `/api/<noun>` (+ verb for inspect) | `GET/PUT /api/config`, `GET /api/sources/midi/inspect` |
 | Git tags / semver | `vMAJOR.MINOR.PATCH`; pre-1.0 minors = features, patches = fixes | `v0.1.0` |
-| Release artifacts | `showbridge_<ver>_<os>_<arch>.{zip,tar.gz}` + `checksums.txt` | `showbridge_0.1.0_windows_amd64.zip` |
+| Release artifacts | `show-mapper_<ver>_<os>_<arch>.{zip,tar.gz}` + `checksums.txt` | `show-mapper_0.1.0_windows_amd64.zip` |
 | Commits | conventional commits, scopes: config, conductor, midi, osc, streamdeck, server, web, ci, docs, deps | `feat(midi): …` |
 | Code TODOs | `TODO(hardware)` = needs physical verification; otherwise `TODO(scope)` | |
 
@@ -296,7 +296,7 @@ items, deliberately flagged rather than done half-heartedly.
 ## 11. Repo layout
 
 ```
-├─ cmd/showbridge/          main + subcommands + embedded example template
+├─ cmd/show-mapper/          main + subcommands + embedded example template
 ├─ internal/
 │  ├─ core/                 types, interfaces, registries, conductor, binding resolution
 │  ├─ config/               config schema, validation, load/save
@@ -308,7 +308,7 @@ items, deliberately flagged rather than done half-heartedly.
 ├─ docs/                    this file, midi-devices, grandma3, protocols, releasing
 ├─ .github/workflows/       ci.yml, release.yml
 ├─ Makefile, AGENTS.md, CONTRIBUTING.md, README.md, LICENSE,
-│  showbridge.example.yaml, .golangci.yml, .editorconfig
+│  show-mapper.example.yaml, .golangci.yml, .editorconfig
 ```
 
 ---
@@ -316,7 +316,7 @@ items, deliberately flagged rather than done half-heartedly.
 ## 12. Roadmap
 
 | Milestone | Content |
-|---|---|
+| --- | --- |
 | **v0.1** (this scaffold) | MIDI sources (built-in + custom boards), OSC target + grandMA3 presets, WS UI, config import/export + disk hot-reload, self-update checker, CI/CD |
 | v0.2 | Stream Deck source (HID), MIDI-learn→custom-profile wizard in UI, OSC input for LED feedback |
 | v0.3 | ArtNet + sACN targets, NIC pickers, unicast/multicast |

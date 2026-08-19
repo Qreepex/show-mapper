@@ -1,9 +1,5 @@
-module github.com/yourorg/showbridge
+module github.com/Qreepex/show-mapper
 
-// NOTE: This module path is a placeholder for bootstrapping.
-// Replace "github.com/yourorg/showbridge" with your real repo path after forking/renaming:
-//   rg -l "github.com/yourorg/showbridge" | xargs sed -i 's#github.com/yourorg/showbridge#github.com/YOU/REPO#g'
-// (On Windows git-bash the same command works.)
 go 1.24
 
 require (

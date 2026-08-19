@@ -1,9 +1,9 @@
-# Building & releasing showbridge
+# Building & releasing show-mapper
 
 ## Why CGO (and what that means)
 
 Real device I/O uses RtMidi (C++) → Go needs **CGO** (`CGO_ENABLED=1` plus a
-C/C++ toolchain). Consequence: **we do not cross-compile releases** — CI
+C/C++ toolchain). Consequence: **we do not cross-compile releases** - CI
 builds each platform natively on its own runner. For day-to-day dev and all
 unit tests, `CGO_ENABLED=0` compiles the whole app with a stub MIDI driver
 (status shows a clear error instead of hardware access), so frontend/API work
@@ -12,7 +12,7 @@ never needs a toolchain.
 ## Build prerequisites per OS
 
 | Target | Toolchain notes |
-|---|---|
+| --- | --- |
 | linux/amd64 | `apt install build-essential libasound2-dev pkg-config` (RtMidi uses ALSA) |
 | windows/amd64 | MinGW-w64 g++ (e.g. `choco install mingw` or the msys2 UCRT64 toolchain we install in CI) |
 | darwin/amd64, darwin/arm64 | Xcode CLT (present on GH runners); links CoreMIDI/CoreAudio frameworks |
@@ -28,13 +28,15 @@ goes in via ldflags (`internal/version`): `-X …/version.Version=0.1.0
   (linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64):
   per OS: install toolchain → build web (`npm ci && npm run build`) →
   `CGO_ENABLED=1 go build -trimpath -ldflags …` → package
-  `showbridge_<ver>_<os>_<arch>.{zip,tar.gz}` (+ README/LICENSE/example
+  `show-mapper_<ver>_<os>_<arch>.{zip,tar.gz}` (+ README/LICENSE/example
   config) → `checksums.txt` → GitHub Release (auto notes).
 - Practically:
+
   ```bash
   git tag v0.1.0 && git push origin v0.1.0   # CI does the rest
   ```
-- Local snapshot (single platform): `make web && make build` — or run the
+
+- Local snapshot (single platform): `make web && make build` - or run the
   release workflow's build step manually.
 
 ## Adding a platform
@@ -43,7 +45,7 @@ Edit `release.yml`'s matrix. Watch-outs: every entry builds **natively** with a
 matching toolchain. linux/arm64 uses the hosted ARM runner
 (`ubuntu-24.04-arm`). windows/arm64 isn't wired up yet: GH hosted
 `windows-11-arm` runners work, but RtMidi needs a working clang-mingw
-toolchain there — add when there's real demand (❗ verify `midi list` on the
+toolchain there - add when there's real demand (❗ verify `midi list` on the
 resulting binary).
 
 ## Code signing / quarantine (current: unsigned)
@@ -59,9 +61,9 @@ The app can update itself from these very release assets
 (`internal/updater`, `rhysd/go-github-selfupdate`): config `updates.repo`
 pointing at the GitHub repo + optional `autoCheck` on startup. The updater
 verifies downloads against the workflow-generated `checksums.txt`.
-On Windows the replaced binary is moved aside (`showbridge.old.exe`);
+On Windows the replaced binary is moved aside (`show-mapper.old.exe`);
 delete it once the new version runs. Keep asset naming
-(`showbridge_<ver>_<os>_<arch>.{zip,tar.gz}`) stable — the updater's asset
+(`show-mapper_<ver>_<os>_<arch>.{zip,tar.gz}`) stable - the updater's asset
 detection depends on it.
 
 ## CI (non-release)

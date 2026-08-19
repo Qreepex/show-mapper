@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   go:
-    name: go (vet, test, build — CGO off)
+    name: go (vet, test, build - CGO off)
     runs-on: ubuntu-latest
     env:
       CGO_ENABLED: "0"

@@ -3,7 +3,7 @@
 // action) download + install it in place. Pure Go, no CGO.
 //
 // The release asset names produced by .github/workflows/release.yml
-// (showbridge_<ver>_<os>_<arch>.* + checksums.txt) are discovered and
+// (show-mapper_<ver>_<os>_<arch>.* + checksums.txt) are discovered and
 // checksum-verified by github.com/rhysd/go-github-selfupdate.
 //
 // The feature activates only when `updates.repo` ("owner/name") is set in the
@@ -20,7 +20,7 @@ import (
 	"github.com/blang/semver"
 	selfupdate "github.com/rhysd/go-github-selfupdate/selfupdate"
 
-	"github.com/yourorg/showbridge/internal/version"
+	"github.com/Qreepex/show-mapper/internal/version"
 )
 
 // UpdateStatus is the (cacheable, JSON/WS-broadcast) state of update knowledge.
@@ -87,7 +87,7 @@ func Check(repo string) UpdateStatus {
 }
 
 // Apply downloads and swaps in the currently detected release binary.
-// On Windows the running .exe is renamed aside (showbridge.old.exe) so the
+// On Windows the running .exe is renamed aside (show-mapper.old.exe) so the
 // new one can take its place — delete the *.old* file later. Restart the
 // app to run the new version.
 func Apply(st UpdateStatus) error {

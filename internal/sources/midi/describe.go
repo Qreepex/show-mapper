@@ -3,7 +3,7 @@ package midi
 import "fmt"
 
 // Describe renders a raw MIDI message as a compact, human-readable line —
-// used by `showbridge midi monitor` and log output. Pure Go, no CGO needed.
+// used by `show-mapper midi monitor` and log output. Pure Go, no CGO needed.
 func Describe(data []byte) string {
 	if len(data) == 0 {
 		return "<empty>"

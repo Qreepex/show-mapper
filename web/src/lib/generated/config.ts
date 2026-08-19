@@ -3,11 +3,11 @@
 //////////
 // source: config.go
 /*
-Package config defines the showbridge configuration file format,
+Package config defines the show-mapper configuration file format,
 loading, validation and persistence.
 
-The config is a single YAML file (default: ./showbridge.yaml or
-$USER_CONFIG_DIR/showbridge/config.yaml). It is edited either by hand
+The config is a single YAML file (default: ./show-mapper.yaml or
+$USER_CONFIG_DIR/show-mapper/config.yaml). It is edited either by hand
 or through the web UI (which PUTs to /api/config). The backend hot-reloads
 connectors after a successful save.
 */

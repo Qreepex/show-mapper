@@ -1,14 +1,14 @@
-// showbridge — bridge physical control surfaces (MIDI boards, soon
+// show-mapper — bridge physical control surfaces (MIDI boards, soon
 // Stream Decks, ...) to show-software targets (grandMA3 via OSC, soon
 // ArtNet/sACN, timecode).
 //
 // Subcommands:
 //
-//	showbridge serve              run the backend + web UI (default)
-//	showbridge config init [path] write an annotated example config
-//	showbridge midi list          list OS MIDI in/out ports
-//	showbridge midi monitor <dev> dump decoded MIDI events (mapping helper)
-//	showbridge version            print build info
+//	show-mapper serve              run the backend + web UI (default)
+//	show-mapper config init [path] write an annotated example config
+//	show-mapper midi list          list OS MIDI in/out ports
+//	show-mapper midi monitor <dev> dump decoded MIDI events (mapping helper)
+//	show-mapper version            print build info
 package main
 
 import (
@@ -22,19 +22,19 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/yourorg/showbridge/internal/config"
-	"github.com/yourorg/showbridge/internal/core"
-	"github.com/yourorg/showbridge/internal/server"
-	"github.com/yourorg/showbridge/internal/version"
+	"github.com/Qreepex/show-mapper/internal/config"
+	"github.com/Qreepex/show-mapper/internal/core"
+	"github.com/Qreepex/show-mapper/internal/server"
+	"github.com/Qreepex/show-mapper/internal/version"
 
 	// Connectors register themselves via init(). Add future ones here
 	// (internal/sources/streamdeck, internal/targets/artnet, ...).
-	"github.com/yourorg/showbridge/internal/sources/midi"
-	_ "github.com/yourorg/showbridge/internal/targets/osc"
+	"github.com/Qreepex/show-mapper/internal/sources/midi"
+	_ "github.com/Qreepex/show-mapper/internal/targets/osc"
 
 	// Helper modules (action presets etc.) — each is self-contained with its
 	// own docs and can be removed from this import list without core changes.
-	_ "github.com/yourorg/showbridge/internal/helpers/gma3"
+	_ "github.com/Qreepex/show-mapper/internal/helpers/gma3"
 )
 
 func main() {
@@ -51,7 +51,7 @@ func run(args []string) int {
 		case "midi":
 			return cmdMIDI(args[1:])
 		case "version":
-			fmt.Printf("showbridge %s (commit %s, built %s)\n", version.Version, version.Commit, version.Date)
+			fmt.Printf("show-mapper %s (commit %s, built %s)\n", version.Version, version.Commit, version.Date)
 			return 0
 		case "help":
 			usage()
@@ -67,14 +67,14 @@ func run(args []string) int {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `showbridge %s — control-surface to show-software bridge
+	fmt.Fprintf(os.Stderr, `show-mapper %s — control-surface to show-software bridge
 
 Usage:
-  showbridge [serve] [flags]    run backend + web UI (default action)
-  showbridge config init [path] write annotated example config (default ./showbridge.yaml)
-  showbridge midi list          list OS MIDI in/out ports
-  showbridge midi monitor <dev> dump decoded MIDI events for a device (name substring)
-  showbridge version            print build info
+  show-mapper [serve] [flags]    run backend + web UI (default action)
+  show-mapper config init [path] write annotated example config (default ./show-mapper.yaml)
+  show-mapper midi list          list OS MIDI in/out ports
+  show-mapper midi monitor <dev> dump decoded MIDI events for a device (name substring)
+  show-mapper version            print build info
 
 serve flags:
   -config <path>   use a specific config file
@@ -105,7 +105,7 @@ func cmdServe(args []string) int {
 	}
 	if err != nil {
 		slog.Error("loading config", "err", err)
-		slog.Info("hint: run `showbridge config init` to create a starter config")
+		slog.Info("hint: run `show-mapper config init` to create a starter config")
 		return 2
 	}
 	cfg := cfgFile.Get()
@@ -172,10 +172,10 @@ func cmdServe(args []string) int {
 
 func cmdConfig(args []string) int {
 	if len(args) == 0 || args[0] != "init" {
-		fmt.Fprintln(os.Stderr, "usage: showbridge config init [path]")
+		fmt.Fprintln(os.Stderr, "usage: show-mapper config init [path]")
 		return 2
 	}
-	path := "./showbridge.yaml"
+	path := "./show-mapper.yaml"
 	if len(args) > 1 {
 		path = args[1]
 	}
@@ -187,7 +187,7 @@ func cmdConfig(args []string) int {
 		fmt.Fprintf(os.Stderr, "writing %s: %v\n", path, err)
 		return 1
 	}
-	fmt.Printf("wrote %s\n\nNext steps:\n  1. edit %s (set your grandMA3 IP, pick your board)\n  2. showbridge serve\n  3. open the web UI shown in the log (default http://127.0.0.1:8080)\n", path, path)
+	fmt.Printf("wrote %s\n\nNext steps:\n  1. edit %s (set your grandMA3 IP, pick your board)\n  2. show-mapper serve\n  3. open the web UI shown in the log (default http://127.0.0.1:8080)\n", path, path)
 	return 0
 }
 
@@ -197,7 +197,7 @@ func cmdConfig(args []string) int {
 
 func cmdMIDI(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: showbridge midi <list|monitor>")
+		fmt.Fprintln(os.Stderr, "usage: show-mapper midi <list|monitor>")
 		return 2
 	}
 	switch args[0] {
@@ -232,7 +232,7 @@ func midiList() int {
 
 func midiMonitor(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: showbridge midi monitor <device-name-substring>")
+		fmt.Fprintln(os.Stderr, "usage: show-mapper midi monitor <device-name-substring>")
 		return 2
 	}
 	match := args[0]

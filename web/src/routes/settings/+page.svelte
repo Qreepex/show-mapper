@@ -129,7 +129,7 @@
   <div class="card">
     <h2>Config file</h2>
     <div class="row">
-      <a class="btnlike" href={api.exportConfigURL} download="showbridge.yaml">
+      <a class="btnlike" href={api.exportConfigURL} download="show-mapper.yaml">
         ⭳ Download config (YAML)
       </a>
       <button onclick={() => importEl.click()}>⭱ Import config (YAML)…</button>
@@ -149,7 +149,7 @@
     <div class="row">
       <div class="grow">
         <label for="updrepo">GitHub repo for releases (&quot;owner/name&quot;)</label>
-        <input id="updrepo" class="mono" style="width:100%" placeholder="yourname/showbridge"
+        <input id="updrepo" class="mono" style="width:100%" placeholder="Qreepex/show-mapper"
           value={draft.updates?.repo ?? ""}
           oninput={(e) => {
             draft && (draft.updates = { repo: e.currentTarget.value, autoCheck: draft.updates?.autoCheck ?? false });
@@ -276,7 +276,7 @@
       Built-in boards (e.g. <code>apc-mini-mk2</code>) ship with the app. Any other
       controller can be described here and used via <code>profile</code> in a source.
       Discover note/CC numbers on the Dashboard (press a button → <code>note:NN</code>)
-      or with <code>showbridge midi monitor</code>.
+      or with <code>show-mapper midi monitor</code>.
     </p>
     {#each draft.profiles ?? [] as p, pi (pi)}
       <div class="inst">

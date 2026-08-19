@@ -3,9 +3,9 @@
 // Release builds inject values like:
 //
 //	go build -ldflags "\
-//	  -X github.com/yourorg/showbridge/internal/version.Version=0.1.0 \
-//	  -X github.com/yourorg/showbridge/internal/version.Commit=$(git rev-parse HEAD) \
-//	  -X github.com/yourorg/showbridge/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+//	  -X github.com/Qreepex/show-mapper/internal/version.Version=0.1.0 \
+//	  -X github.com/Qreepex/show-mapper/internal/version.Commit=$(git rev-parse HEAD) \
+//	  -X github.com/Qreepex/show-mapper/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 package version
 
 var (
