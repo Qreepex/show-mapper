@@ -90,3 +90,15 @@ th { color: var(--muted); font-weight: 600; }
 
 .flash-ok { color: var(--ok); }
 .flash-err { color: var(--err); white-space: pre-wrap; }
+
+.btnlike {
+  display: inline-block;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  text-decoration: none;
+  font: inherit;
+}
+.btnlike:hover { border-color: var(--accent); }

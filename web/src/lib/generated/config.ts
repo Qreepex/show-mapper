@@ -236,3 +236,23 @@ export const ValueTypeFloat = "float";
 export interface File {
   Path: string;
 }
+
+//////////
+// source: sections.go
+
+export const SectionBindings = "bindings";
+export const SectionSources = "sources";
+export const SectionTargets = "targets";
+export const SectionProfiles = "profiles";
+/**
+ * SectionFile is the transport format for one section.
+ */
+export interface SectionFile {
+  kind: string;
+  bindings?: Binding[];
+  sources?: SourceConfig[];
+  targets?: TargetConfig[];
+  profiles?: ProfileConfig[];
+}
+export const MergeUpsert = "upsert"; // replace entries with matching keys, add new ones, keep the rest
+export const MergeReplace = "replace"; // replace the whole section

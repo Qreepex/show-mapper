@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -46,6 +47,9 @@ func New(cfgFile *config.File, cond *core.Conductor, hub *Hub) *Server {
 	mux.HandleFunc("PUT /api/config", s.handlePutConfig)
 	mux.HandleFunc("GET /api/config/export", s.handleExportConfig)
 	mux.HandleFunc("POST /api/config/import", s.handleImportConfig)
+	mux.HandleFunc("GET /api/config/export/sections/{section}", s.handleExportSection)
+	mux.HandleFunc("POST /api/config/import/section", s.handleImportSection)
+	mux.HandleFunc("GET /api/system/interfaces", s.handleInterfaces)
 	mux.HandleFunc("POST /api/presets/resolve", s.handleResolvePreset)
 	mux.HandleFunc("GET /api/update/status", s.handleUpdateStatus)
 	mux.HandleFunc("POST /api/update/check", s.handleUpdateCheck)
@@ -202,6 +206,85 @@ func (s *Server) handleImportConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// handleExportSection downloads a single section (bindings|sources|targets|profiles)
+// as YAML — the "settings is individually savable" transport.
+func (s *Server) handleExportSection(w http.ResponseWriter, r *http.Request) {
+	kind := r.PathValue("section")
+	sf, err := config.SectionData(s.cfgFile.Get(), kind)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	data, err := config.MarshalSectionYAML(sf)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/yaml; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="show-mapper-%s.yaml"`, kind))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
+// handleImportSection merges an uploaded section file into the current config.
+// mode: "upsert" (default; replace matching ids/keys, add new, keep others)
+// or "replace" (drop existing entries of that section first).
+func (s *Server) handleImportSection(w http.ResponseWriter, r *http.Request) {
+	mode := r.URL.Query().Get("mode")
+	if mode == "" {
+		mode = config.MergeUpsert
+	}
+	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	sf, err := config.ParseSectionFile(data)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, fmt.Errorf("invalid section file: %w", err))
+		return
+	}
+	cfg := s.cfgFile.Get()
+	if err := cfg.MergeSection(sf, mode); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if err := s.applyNewConfig(cfg); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "merged": sf.Kind, "count": sf.Len(), "mode": mode})
+}
+
+// handleInterfaces lists local network interfaces (for per-instance NIC bind
+// options, e.g. OSC localAddress; multiple instances may use different NICs
+// simultaneously).
+func (s *Server) handleInterfaces(w http.ResponseWriter, _ *http.Request) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	out := make([]NICInfo, 0, len(ifaces))
+	for _, ifi := range ifaces {
+		n := NICInfo{
+			Name: ifi.Name, MAC: ifi.HardwareAddr.String(), MTU: ifi.MTU,
+			Up:        ifi.Flags&net.FlagUp != 0,
+			Multicast: ifi.Flags&net.FlagMulticast != 0,
+			Loopback:  ifi.Flags&net.FlagLoopback != 0,
+		}
+		if addrs, err := ifi.Addrs(); err == nil {
+			for _, a := range addrs {
+				if ip, _, err := net.ParseCIDR(a.String()); err == nil && ip.To4() != nil {
+					n.IPv4 = append(n.IPv4, a.String())
+				}
+			}
+		}
+		out = append(out, n)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"interfaces": out})
 }
 
 // presetResolveRequest is the body of POST /api/presets/resolve.

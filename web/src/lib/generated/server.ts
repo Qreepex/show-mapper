@@ -15,6 +15,19 @@ export interface Envelope {
   data: any;
 }
 /**
+ * NICInfo describes one local network interface — used to bind outputs to a
+ * specific NIC on multi-homed machines (GET /api/system/interfaces).
+ */
+export interface NICInfo {
+  name: string;
+  mac: string;
+  mtu: number /* int */;
+  up: boolean;
+  multicast: boolean;
+  loopback: boolean;
+  ipv4: string[]; // CIDR strings, e.g. "192.168.1.5/24"
+}
+/**
  * Snapshot is the payload of the initial "state.snapshot" WS message.
  */
 export interface Snapshot {

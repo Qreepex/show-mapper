@@ -14,7 +14,10 @@ contract; change code + types (`web/src/lib/types.ts`) + this doc together.
 | PUT | `/api/config` | `Config` → `{ok:true}` or `400 {ok:false, errors:[...]}` | validate → persist (atomic) → hot-reload connectors → broadcast `config.updated`. Unknown JSON fields are rejected. |
 | GET | `/api/config/export` | → YAML download (`Content-Disposition: attachment`) | full config as portable YAML (2-space style, hand-editable) |
 | POST | `/api/config/import` | YAML body → `{ok:true}` | replace the whole config from an uploaded YAML file (validate → persist → reload) |
+| GET | `/api/config/export/sections/{section}` | → YAML download `show-mapper-<section>.yaml` | export one section (`bindings`\|`sources`\|`targets`\|`profiles`) as `kind:`-tagged YAML |
+| POST | `/api/config/import/section?mode=upsert\|replace` | section YAML → `{ok, merged, count, mode}` | merge one section file: **upsert** by id/key (default) keeps unrelated entries; **replace** swaps the whole section. Validates → persists → hot-reloads |
 | POST | `/api/presets/resolve` | `{id, params{}}` → `ActionConfig` | build a concrete action from a helper-module preset (e.g. `gma3.go`, `{"page":"1","executor":"201"}`) |
+| GET | `/api/system/interfaces` | → `{interfaces: NICInfo[]}` (name, mac, mtu, up, multicast, loopback, ipv4[]) | lists NICs for per-instance local bind options (e.g. OSC `localAddress`) |
 | GET | `/api/update/status` | → `UpdateStatus` | last known update state (no network unless repo changed) |
 | POST | `/api/update/check` | → `UpdateStatus` | query GitHub releases now; broadcasts `update.available` when newer |
 | POST | `/api/update/apply` | → `{ok, message}` | download + install the detected release (checksum-verified; restart app after) |

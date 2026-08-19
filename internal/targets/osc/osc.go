@@ -7,6 +7,7 @@ package osc
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"sync"
 
@@ -21,21 +22,25 @@ func init() {
 		Name: "OSC (Open Sound Control over UDP) — grandMA3, other show software",
 		Options: []core.FieldSpec{
 			{Name: "host", Label: "Host / IP", Type: "text", Required: true,
-				Help: "IP of the OSC receiver (e.g. grandMA3 console/onPC)."},
+				Help: "IP of the OSC receiver."},
 			{Name: "port", Label: "Port", Type: "number", Required: true, Default: 8000,
-				Help: "UDP port of the OSC receiver. Note: grandMA3 uses each OSC config row's port for BOTH send and receive."},
+				Help: "UDP port of the OSC receiver."},
 			{Name: "prefix", Label: "Address prefix", Type: "text",
-				Help: "Optional prefix prepended to every address (no slashes). Must match the grandMA3 OSC row's Prefix field."},
+				Help: "Optional prefix prepended to every address (no slashes)."},
+			{Name: "localAddress", Label: "Local address (NIC)", Type: "text",
+				Help: "Optional: local IPv4 address (NIC) the outgoing socket binds to — for machines with multiple network interfaces. List yours via GET /api/system/interfaces or the Settings hint. Multiple instances can use different NICs at the same time."},
 		},
 	}, NewTarget)
 }
 
-// Target sends OSC messages over UDP.
+// Target sends OSC messages over UDP, optionally bound to a specific local
+// address (NIC) for multi-NIC machines.
 type Target struct {
 	id     string
 	host   string
 	port   int
 	prefix string
+	local  net.IP
 
 	mu     sync.Mutex
 	st     core.Status
@@ -53,11 +58,20 @@ func NewTarget(cfg config.TargetConfig) (core.Target, error) {
 		return nil, fmt.Errorf("target %q (osc): options.port %d out of range", cfg.ID, port)
 	}
 	prefix := strings.Trim(config.OptionString(cfg.Options, "prefix", ""), "/")
+	var local net.IP
+	if s := strings.TrimSpace(config.OptionString(cfg.Options, "localAddress", "")); s != "" {
+		ip := net.ParseIP(s)
+		if ip == nil || ip.To4() == nil {
+			return nil, fmt.Errorf("target %q (osc): options.localAddress %q is not a valid IPv4 address", cfg.ID, s)
+		}
+		local = ip
+	}
 	return &Target{
 		id:     cfg.ID,
 		host:   host,
 		port:   port,
 		prefix: prefix,
+		local:  local,
 		st:     core.Status{State: core.StateDisconnected},
 	}, nil
 }
@@ -68,10 +82,17 @@ func (t *Target) Type() string { return "osc" }
 func (t *Target) Connect(_ context.Context) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.client = goosc.NewClient(t.host, t.port)
+	client := goosc.NewClient(t.host, t.port)
+	if t.local != nil {
+		if err := client.SetLocalAddr(t.local.String(), 0); err != nil {
+			t.st = core.Status{State: core.StateError, Detail: err.Error()}
+			return fmt.Errorf("binding local address %s: %w", t.local, err)
+		}
+	}
+	t.client = client
 	t.st = core.Status{
 		State:  core.StateConnected,
-		Detail: fmt.Sprintf("udp://%s:%d", t.host, t.port),
+		Detail: t.detail(),
 	}
 	return nil
 }
@@ -101,8 +122,16 @@ func (t *Target) Send(a core.Action) error {
 		t.st = core.Status{State: core.StateError, Detail: err.Error()}
 		return fmt.Errorf("osc send %s: %w", msg.Address, err)
 	}
-	t.st = core.Status{State: core.StateConnected, Detail: fmt.Sprintf("udp://%s:%d", t.host, t.port)}
+	t.st = core.Status{State: core.StateConnected, Detail: t.detail()}
 	return nil
+}
+
+func (t *Target) detail() string {
+	d := fmt.Sprintf("udp %s:%d", t.host, t.port)
+	if t.local != nil {
+		d = fmt.Sprintf("udp %s → %s:%d", t.local, t.host, t.port)
+	}
+	return d
 }
 
 // address applies the optional MA-style prefix: prefix "ma" + "/cmd" => "/ma/cmd".

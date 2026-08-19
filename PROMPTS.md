@@ -9,12 +9,4 @@ The types for communication from backend/frontend should be generated from the b
 
 --
 
-The software should be runnable as a portable application with no installation step needed. It only needs to be extracted and run. The software should be runnable on Windows, MacOS and Linux. The software should be runnable on ARM and x86/x64 architectures. It needs support for varios network interfaces and multiple network interfaces at the same time.
-The Config should be saved in a single file in the same folder as the application or the user can configure a different location for the config file. Use a human readable format like JSON or YAML for the config file. The config file should be editable by hand and the software should be able to reload the config file without restarting.
-The user should be able to port a config from mashine a to mashine just by copying the config file.
-The software should allow the user loading and saving the config files via the web ui.
-Same for all mapping and sources and target settings, all those settings should be individually savable, exportable and importable.
-
---
-
 The software should check for updates and notify the user if a new version is available. The user should be able to download and install the update from within the software. The software should also have an option to check for updates automatically on startup.

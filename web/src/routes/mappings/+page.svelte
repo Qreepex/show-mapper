@@ -18,6 +18,23 @@
   // Per-row preset selection + params (helper-module sugar, e.g. "gma3.go").
   let presetSel = $state<Record<number, { id: string; params: Record<string, string> }>>({});
   let presetMsg = $state<{ row: number; text: string; ok: boolean } | null>(null);
+  let impEl = $state<HTMLInputElement>() as HTMLInputElement;
+
+  async function importBindings(e: Event) {
+    const file = (e.currentTarget as HTMLInputElement).files?.[0];
+    saveMsg = null;
+    if (!file) return;
+    try {
+      await api.importSection(file);
+      cfg = await api.config();
+      draft = structuredClone(cfg.bindings ?? []);
+      saveMsg = { text: "Bindings imported (upserted by id).", ok: true };
+    } catch (err) {
+      saveMsg = { text: err instanceof ApiError ? err.errors.join("\n") : String(err), ok: false };
+    } finally {
+      if (impEl) impEl.value = "";
+    }
+  }
 
   onMount(async () => {
     [meta, cfg] = await Promise.all([api.meta(), api.config()]);
@@ -111,6 +128,9 @@
     <div class="row" style="margin-bottom: 1rem">
       <button class="primary" onclick={addBinding}>+ Add binding</button>
       <button onclick={save}>Save &amp; apply</button>
+      <a class="btnlike" href={api.exportSectionURL("bindings")} download="show-mapper-bindings.yaml">⭳ Export</a>
+      <button onclick={() => impEl.click()}>⭱ Import…</button>
+      <input bind:this={impEl} type="file" accept=".yaml,.yml" hidden onchange={importBindings} />
       {#if saveMsg}
         <span class={saveMsg.ok ? "flash-ok" : "flash-err"}>{saveMsg.text}</span>
       {/if}

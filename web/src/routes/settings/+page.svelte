@@ -5,6 +5,7 @@
     Config,
     ControlKind,
     Meta,
+    NICInfo,
     ProfileConfig,
     SourceConfig,
     TargetConfig,
@@ -14,6 +15,41 @@
   let draft = $state<Config | null>(null);
   let saveMsg = $state<{ text: string; ok: boolean } | null>(null);
   let importEl = $state<HTMLInputElement>() as HTMLInputElement;
+  let sectionImpEl = $state<HTMLInputElement>() as HTMLInputElement;
+  let pendingSection = $state("");
+  let ifaces = $state<NICInfo[] | null>(null);
+
+  function askImportSection(kind: string) {
+    pendingSection = kind;
+    sectionImpEl.click();
+  }
+
+  async function onSectionFile(e: Event) {
+    const file = (e.currentTarget as HTMLInputElement).files?.[0];
+    saveMsg = null;
+    if (!file) return;
+    try {
+      await api.importSection(file);
+      saveMsg = { text: `${pendingSection} imported (upserted by id).`, ok: true };
+      await reloadDraft();
+    } catch (err) {
+      saveMsg = { text: err instanceof ApiError ? err.errors.join("\n") : String(err), ok: false };
+    } finally {
+      if (sectionImpEl) sectionImpEl.value = "";
+    }
+  }
+
+  async function toggleIfaces() {
+    if (ifaces) {
+      ifaces = null;
+      return;
+    }
+    try {
+      ifaces = (await api.interfaces()).interfaces;
+    } catch (err) {
+      saveMsg = { text: err instanceof ApiError ? err.errors.join("\n") : String(err), ok: false };
+    }
+  }
 
   async function reloadDraft() {
     draft = structuredClone(await api.config());
@@ -226,6 +262,10 @@
       </div>
     {/each}
     <button onclick={addSource}>+ Add source</button>
+    <div class="row sect-actions">
+      <a class="btnlike" href={api.exportSectionURL("sources")} download="show-mapper-sources.yaml">⭳ Export sources</a>
+      <button onclick={() => askImportSection("sources")}>⭱ Import…</button>
+    </div>
   </div>
 
   <div class="card">
@@ -268,6 +308,33 @@
       </div>
     {/each}
     <button onclick={addTarget}>+ Add target</button>
+    <div class="row sect-actions">
+      <a class="btnlike" href={api.exportSectionURL("targets")} download="show-mapper-targets.yaml">⭳ Export targets</a>
+      <button onclick={() => askImportSection("targets")}>⭱ Import…</button>
+      <button onclick={toggleIfaces}>{ifaces ? "Hide" : "Show"} network interfaces</button>
+    </div>
+    {#if ifaces}
+      <table class="ifacetab">
+        <thead>
+          <tr><th>Name</th><th>IPv4</th><th>Up</th><th>Multicast</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          {#each ifaces as n (n.name)}
+            <tr>
+              <td class="mono">{n.name}</td>
+              <td class="mono">{n.ipv4.length ? n.ipv4.join(", ") : "—"}</td>
+              <td>{n.up ? "✓" : ""}</td>
+              <td>{n.multicast ? "✓" : ""}</td>
+              <td class="muted">{n.loopback ? "loopback" : ""}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+      <p class="muted hint">
+        Use one of the IPv4 addresses as a target's <code>localAddress</code> to pin it
+        to that NIC. Multiple target instances can bind different NICs simultaneously.
+      </p>
+    {/if}
   </div>
 
   <div class="card">
@@ -339,7 +406,12 @@
     <button onclick={() => draft && (draft.profiles = [...(draft.profiles ?? []), newProfile()])}>
       + Add board
     </button>
+    <div class="row sect-actions">
+      <a class="btnlike" href={api.exportSectionURL("profiles")} download="show-mapper-profiles.yaml">⭳ Export boards</a>
+      <button onclick={() => askImportSection("profiles")}>⭱ Import…</button>
+    </div>
   </div>
+  <input bind:this={sectionImpEl} type="file" accept=".yaml,.yml" hidden onchange={onSectionFile} />
 {/if}
 
 <style>
@@ -355,6 +427,8 @@
   .hint { margin: 0.4rem 0 0; font-size: 0.85rem; }
   .ctrllist input, .ctrllist select { width: 100%; }
   code { background: var(--panel-2); padding: 0 0.3em; border-radius: 0.3em; }
+  .sect-actions { margin-top: 0.5rem; gap: 0.5rem; }
+  .ifacetab { margin-top: 0.6rem; }
   .btnlike {
     display: inline-block;
     background: var(--panel-2);

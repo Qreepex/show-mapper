@@ -268,6 +268,13 @@ func Candidates() []string {
 	if wd, err := os.Getwd(); err == nil {
 		out = append(out, filepath.Join(wd, "show-mapper.yaml"))
 	}
+	// portable-app mode: the binary's own directory (double-click runs)
+	if exe, err := os.Executable(); err == nil {
+		if real, err := filepath.EvalSymlinks(exe); err == nil {
+			exe = real
+		}
+		out = append(out, filepath.Join(filepath.Dir(exe), "show-mapper.yaml"))
+	}
 	if dir, err := os.UserConfigDir(); err == nil {
 		out = append(out, filepath.Join(dir, "show-mapper", "config.yaml"))
 	}

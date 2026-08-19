@@ -19,6 +19,18 @@ type Envelope struct {
 	Data any       `json:"data"`
 }
 
+// NICInfo describes one local network interface — used to bind outputs to a
+// specific NIC on multi-homed machines (GET /api/system/interfaces).
+type NICInfo struct {
+	Name      string   `json:"name"`
+	MAC       string   `json:"mac"`
+	MTU       int      `json:"mtu"`
+	Up        bool     `json:"up"`
+	Multicast bool     `json:"multicast"`
+	Loopback  bool     `json:"loopback"`
+	IPv4      []string `json:"ipv4"` // CIDR strings, e.g. "192.168.1.5/24"
+}
+
 // Snapshot is the payload of the initial "state.snapshot" WS message.
 type Snapshot struct {
 	Version    string              `json:"version"`

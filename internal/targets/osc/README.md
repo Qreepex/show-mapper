@@ -9,9 +9,10 @@ Deliberately generic - console-specific sugar lives in helper modules
 
 | option | type | required | default | notes |
 | --- | --- | --- | --- | --- |
-| `host` | text | yes | - | receiver IP (unicast; broadcast also works) |
+| `host` | text | yes | — | receiver IP (unicast; broadcast also works) |
 | `port` | number | yes | 8000 | receiver UDP port |
 | `prefix` | text | no | "" | prepended to every address, no slashes.<br>`prefix: lights` + `/cmd` → `/lights/cmd` |
+| `localAddress` | text | no | "" | local IPv4 (NIC) the outgoing socket binds to, for multi-homed machines. List NICs at `GET /api/system/interfaces` or Settings → “Show network interfaces”. Several instances may each bind a different NIC at the same time. |
 
 ## How actions map to OSC
 

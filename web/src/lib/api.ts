@@ -1,5 +1,5 @@
 // Thin REST client for the show-mapper API (see docs/protocols.md).
-import type { ActionConfig, Config, ConnectorState, Meta, UpdateStatus } from "./types";
+import type { ActionConfig, Config, ConnectorState, Meta, NICInfo, UpdateStatus } from "./types";
 
 export class ApiError extends Error {
   errors: string[];
@@ -50,6 +50,22 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, params }),
     }),
+  exportSectionURL: (kind: "bindings" | "sources" | "targets" | "profiles") =>
+    `/api/config/export/sections/${kind}`,
+  /** Merge an uploaded section file into the config (upsert/replace). */
+  importSection: async (file: File, mode: "upsert" | "replace" = "upsert") => {
+    const res = await fetch(`/api/config/import/section?mode=${mode}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/yaml" },
+      body: await file.text(),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new ApiError(Array.isArray(body.errors) ? body.errors : [res.statusText]);
+    }
+  },
+  /** Local network interfaces (for per-instance NIC bind options). */
+  interfaces: () => req<{ interfaces: NICInfo[] }>("/api/system/interfaces"),
   /** Self-update (active when updates.repo is set in the config). */
   updateStatus: () => req<UpdateStatus>("/api/update/status"),
   updateCheck: () => req<UpdateStatus>("/api/update/check", { method: "POST" }),

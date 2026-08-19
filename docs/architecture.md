@@ -105,9 +105,10 @@ CGO) → marked error, no retry (`core.PermanentError`).
 
 ## 4. Configuration model
 
-One YAML file (`show-mapper.yaml`; search order: `$SHOWMAPPER_CONFIG` →
-`./show-mapper.yaml` → `$UserConfigDir/show-mapper/config.yaml`; `-config` flag
-overrides). Edited by hand or via the UI; saving through the UI validates,
+One YAML file (`show-mapper.yaml`; probe order: `$SHOWMAPPER_CONFIG` →
+`./show-mapper.yaml` (working dir) → `show-mapper.yaml` in the **binary's
+directory** (portable double-click runs) → `$UserConfigDir/show-mapper/config.yaml`;
+`-config` flag overrides). Edited by hand or via the UI; saving through the UI validates,
 persists atomically (tmp+rename, `.bak` kept), broadcasts `config.updated`,
 and hot-reloads all connectors.
 
@@ -130,10 +131,14 @@ lists exposed via `/api/meta` keep the UI schema-agnostic.
 **Config lifecycle:** one portable YAML - copy it machine→machine as-is.
 Every apply path validates → persists atomically → hot-reloads connectors:
 (a) UI save (`PUT /api/config`), (b) full YAML import/export via UI
-(`POST /api/config/import`, `GET /api/config/export`), (c) hand edits of the
+(`POST /api/config/import`, `GET /api/config/export`), (b2) **per-section**
+import/export — bindings, sources, targets and profiles are individually
+savable/exportable/importable
+(`GET /api/config/export/sections/{section}`, `POST /api/config/import/section`,
+upsert-by-id or replace) — and (c) hand edits of the
 file itself (fsnotify watcher, debounced, de-duplicated against our own
-saves). Saved YAML is normalized to 2-space indentation - same style as the
-examples - so hand-written entries never fight the writer’s formatting.
+saves). Saved YAML is normalized to 2-space indentation — same style as the
+examples — so hand-written entries never fight the writer’s formatting.
 
 ---
 
@@ -193,16 +198,18 @@ inside the module dir (example: `internal/helpers/gma3/README.md`).
    unicast target, universe/net/subnet, priority (sACN), rate limiting.
 4. Same docs/tests/registration steps as 5.2.
 
-### 5.4 Network plan (answers "interfaces must be configurable")
+### 5.4 Network plan (interfaces are user-configurable)
 
-- **OSC (now):** per-target `host`, `port`, `prefix`. (MA3 quirk: each OSC row
-  uses one port for both directions - see internal/helpers/gma3/README.md.)
-- **ArtNet/sACN (plan):** per-target `interface` (local NIC IP to bind),
-  `universe`, unicast destination vs broadcast/multicast, TTL/priority. UI
-  will offer a NIC dropdown via an inspector on the target side (inspector is
-  currently source-only - extend symmetrically when needed).
-- **Firewall cheat sheet (docs for users):** OSC commonly UDP 8000/9000,
-  Art-Net UDP 6454, sACN UDP 5568, show-mapper UI TCP 8080.
+- **OSC (implemented):** per-target `host`, `port`, `prefix` **and
+  `localAddress`** — the local IPv4/NIC the outgoing UDP socket binds to.
+  Machines with multiple NICs simply run several target instances with
+  different `localAddress` values — simultaneously. NIC discovery helper:
+  `GET /api/system/interfaces` (+ Settings UI listing).
+- **ArtNet/sACN (plan):** per-target NIC bind, universe/net/subnet, unicast
+  vs broadcast/multicast, priority (sACN), rate limiting — same instance
+  pattern as OSC.
+- **Firewall cheat sheet:** OSC commonly UDP 8000/9000, Art-Net UDP 6454,
+  sACN UDP 5568, show-mapper UI TCP 8080.
 
 ### 5.5 MIDI specifics
 
