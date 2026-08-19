@@ -54,8 +54,13 @@
   }
 
   // ---- presets (helper modules, e.g. gma3.*) ------------------------------
+  // NOTE: never mutate $state during template evaluation — all writes happen
+  // in event handlers (presetRow ensures the row entry exists lazily).
 
-  function presetOf(i: number) {
+  function presetView(i: number) {
+    return presetSel[i] ?? { id: "", params: {} };
+  }
+  function presetRow(i: number) {
     if (!presetSel[i]) presetSel[i] = { id: "", params: {} };
     return presetSel[i];
   }
@@ -63,7 +68,7 @@
     return d.meta?.presets.find((p) => p.id === id);
   }
   async function applyPreset(i: number) {
-    const sel = presetOf(i);
+    const sel = presetRow(i);
     if (!sel.id || !d.cfg) return;
     presetMsg = null;
     try {
@@ -109,7 +114,7 @@
   {/if}
 
   {#each bindings() as b, i (i)}
-    {@const sel = presetOf(i)}
+    {@const sel = presetView(i)}
     <Card title={`${b.source}:${b.control || "?"} → ${b.target}`}>
       {#snippet actions()}
         <Button variant="danger" onclick={() => d.cfg && d.cfg.bindings.splice(i, 1)}>✕ remove</Button>
@@ -153,17 +158,17 @@
         <div class="rowline">
           <Field label="Preset (helper)">
             <SelectInput value={sel.id} options={["", ...d.meta.presets.map((p) => p.id)]}
-              onchange={(e: Event) => { sel.id = (e.currentTarget as HTMLSelectElement).value; }} />
+              onchange={(e: Event) => { presetRow(i).id = (e.currentTarget as HTMLSelectElement).value; }} />
           </Field>
           {#if presetMetaOf(sel.id)}
             {#each presetMetaOf(sel.id)!.fields as f (f.name)}
               <Field label={f.label} hint={f.help}>
                 {#if f.type === "number"}
                   <NumberInput value={Number(sel.params[f.name] ?? numdef(f.default))}
-                    oninput={(e: Event) => { sel.params[f.name] = (e.currentTarget as HTMLInputElement).value; }} />
+                    oninput={(e: Event) => { presetRow(i).params[f.name] = (e.currentTarget as HTMLInputElement).value; }} />
                 {:else}
                   <TextInput value={sel.params[f.name] ?? String(f.default ?? "")}
-                    oninput={(e: Event) => { sel.params[f.name] = (e.currentTarget as HTMLInputElement).value; }} />
+                    oninput={(e: Event) => { presetRow(i).params[f.name] = (e.currentTarget as HTMLInputElement).value; }} />
                 {/if}
               </Field>
             {/each}
