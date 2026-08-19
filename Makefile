@@ -52,6 +52,10 @@ dev:
 test:
 	CGO_ENABLED=0 go test ./...
 
+## types: regenerate backend→frontend wire types (tygo) into web/src/lib/generated
+types:
+	go tool tygo generate
+
 vet:
 	go vet ./...
 
@@ -60,6 +64,8 @@ lint:
 
 ## check: everything CI runs locally (except the OS matrix)
 check: vet test
+	go tool tygo generate
+	git diff --exit-code -- web/src/lib/generated
 	cd web && npm run check && npm run build
 	CGO_ENABLED=0 go build ./...
 

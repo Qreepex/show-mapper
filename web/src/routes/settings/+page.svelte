@@ -13,6 +13,26 @@
   let meta = $state<Meta | null>(null);
   let draft = $state<Config | null>(null);
   let saveMsg = $state<{ text: string; ok: boolean } | null>(null);
+  let importEl = $state<HTMLInputElement>() as HTMLInputElement;
+
+  async function reloadDraft() {
+    draft = structuredClone(await api.config());
+  }
+
+  async function importFile(e: Event) {
+    const file = (e.currentTarget as HTMLInputElement).files?.[0];
+    saveMsg = null;
+    if (!file) return;
+    try {
+      await api.importConfig(file);
+      saveMsg = { text: "Config imported & applied.", ok: true };
+      await reloadDraft();
+    } catch (err) {
+      saveMsg = { text: err instanceof ApiError ? err.errors.join("\n") : String(err), ok: false };
+    } finally {
+      if (importEl) importEl.value = ""; // allow re-selecting the same file
+    }
+  }
 
   onMount(async () => {
     const [m, c] = await Promise.all([api.meta(), api.config()]);
@@ -69,11 +89,11 @@
   }
 
   function addControl(p: ProfileConfig) {
-    p.controls.push({ id: `ctrl-${p.controls.length + 1}`, kind: "button", label: "", note: null, cc: null, hasLED: false });
+    p.controls.push({ id: `ctrl-${p.controls.length + 1}`, kind: "button", label: "", hasLED: false });
   }
 
-  function setNum(c: { note?: number | null; cc?: number | null }, field: "note" | "cc", raw: string) {
-    c[field] = raw === "" ? null : Math.trunc(Number(raw));
+  function setNum(c: { note?: number; cc?: number }, field: "note" | "cc", raw: string) {
+    c[field] = raw === "" ? undefined : Math.trunc(Number(raw));
   }
   function csvToList(v: string): string[] {
     return v.split(",").map((s) => s.trim()).filter(Boolean);
@@ -82,6 +102,9 @@
   async function save() {
     if (!draft) return;
     saveMsg = null;
+    if (draft.updates && !draft.updates.repo?.trim()) {
+      draft.updates = undefined; // empty repo string = feature off
+    }
     try {
       await api.saveConfig(draft);
       saveMsg = { text: "Saved — connectors reloaded with the new settings.", ok: true };
@@ -104,9 +127,46 @@
   </div>
 
   <div class="card">
+    <h2>Config file</h2>
+    <div class="row">
+      <a class="btnlike" href={api.exportConfigURL} download="showbridge.yaml">
+        ⭳ Download config (YAML)
+      </a>
+      <button onclick={() => importEl.click()}>⭱ Import config (YAML)…</button>
+      <input bind:this={importEl} type="file" accept=".yaml,.yml" hidden onchange={importFile} />
+      <span class="muted">Move configs between machines; edits also hot-reload from disk.</span>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>HTTP / Web UI</h2>
     <label for="listen">Listen address (localhost-only by default; use 0.0.0.0:8080 on trusted show networks)</label>
     <input id="listen" class="mono" bind:value={draft.http.listen} />
+  </div>
+
+  <div class="card">
+    <h2>Software updates</h2>
+    <div class="row">
+      <div class="grow">
+        <label for="updrepo">GitHub repo for releases (&quot;owner/name&quot;)</label>
+        <input id="updrepo" class="mono" style="width:100%" placeholder="yourname/showbridge"
+          value={draft.updates?.repo ?? ""}
+          oninput={(e) => {
+            draft && (draft.updates = { repo: e.currentTarget.value, autoCheck: draft.updates?.autoCheck ?? false });
+          }} />
+      </div>
+      <div class="row" style="gap:0.4rem; align-items:center">
+        <input id="updauto" type="checkbox" checked={draft.updates?.autoCheck ?? false}
+          onchange={(e) => {
+            draft && (draft.updates = { repo: draft.updates?.repo ?? "", autoCheck: e.currentTarget.checked });
+          }} />
+        <label for="updauto" style="margin:0">Check automatically on startup</label>
+      </div>
+    </div>
+    <p class="muted hint">
+      Off when repo is empty. Downloads are checksum-verified against the release's
+      <code>checksums.txt</code>; applying swaps the binary in place (restart to run it).
+    </p>
   </div>
 
   <div class="card">
@@ -295,4 +355,14 @@
   .hint { margin: 0.4rem 0 0; font-size: 0.85rem; }
   .ctrllist input, .ctrllist select { width: 100%; }
   code { background: var(--panel-2); padding: 0 0.3em; border-radius: 0.3em; }
+  .btnlike {
+    display: inline-block;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    text-decoration: none;
+  }
+  .btnlike:hover { border-color: var(--accent); }
 </style>

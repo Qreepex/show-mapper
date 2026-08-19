@@ -1,5 +1,5 @@
 // Thin REST client for the showbridge API (see docs/protocols.md).
-import type { Config, ConnectorState, Meta } from "./types";
+import type { ActionConfig, Config, ConnectorState, Meta, UpdateStatus } from "./types";
 
 export class ApiError extends Error {
   errors: string[];
@@ -29,8 +29,36 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(cfg),
     }),
+  /** URL of the full-config YAML download (open in a tab / use as anchor href). */
+  exportConfigURL: "/api/config/export",
+  /** Upload a full YAML config (same schema as the download above). */
+  importConfig: async (file: File) => {
+    const res = await fetch("/api/config/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/yaml" },
+      body: await file.text(),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new ApiError(Array.isArray(body.errors) ? body.errors : [res.statusText]);
+    }
+  },
+  /** Resolve a helper-module action preset (e.g. gma3.go) into an ActionConfig. */
+  resolvePreset: (id: string, params: Record<string, unknown>) =>
+    req<ActionConfig>("/api/presets/resolve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, params }),
+    }),
+  /** Self-update (active when updates.repo is set in the config). */
+  updateStatus: () => req<UpdateStatus>("/api/update/status"),
+  updateCheck: () => req<UpdateStatus>("/api/update/check", { method: "POST" }),
+  updateApply: () =>
+    req<{ ok: boolean; message: string }>("/api/update/apply", { method: "POST" }),
   inspectSource: (type: string) =>
-    req<{ ok: boolean; error?: string; result?: { in?: { number: number; name: string }[]; out?: { number: number; name: string }[] } }>(
-      `/api/sources/${type}/inspect`,
-    ),
+    req<{
+      ok: boolean;
+      error?: string;
+      result?: { in?: { number: number; name: string }[]; out?: { number: number; name: string }[] };
+    }>(`/api/sources/${type}/inspect`),
 };

@@ -4,7 +4,7 @@ package main
 // Keep it in sync with showbridge.example.yaml at the repo root and with
 // config struct field names (both are YAML-marshaled from config.Config).
 const exampleConfig = `# showbridge configuration — full annotated version: showbridge.example.yaml (repo root)
-# Docs: docs/architecture.md • MIDI boards: docs/midi-devices.md • grandMA3: docs/grandma3.md
+# Docs: docs/architecture.md • MIDI boards: docs/midi-devices.md • grandMA3: internal/helpers/gma3/README.md
 
 version: 1
 

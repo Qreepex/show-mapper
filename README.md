@@ -8,6 +8,12 @@ timecode tomorrow.
 
 Single Go binary. Embedded web UI for configuration. No drivers to install.
 
+**Core is completely generic.** Sources (MIDI boards, Stream Decks…), targets
+(OSC, ArtNet…) and helper modules (e.g. grandMA3 action presets) are
+self-contained modules under `internal/sources|targets|helpers/<name>` — each
+with its *own* README. The binary runs fine with any subset of modules
+compiled in; nothing device- or console-specific lives at the top level.
+
 ```
 ┌──────────────┐  USB   ┌───────────────────────┐  network  ┌───────────────┐
 │ APC mini mk2 ├───────►│       showbridge      ├──────────►│  grandMA3     │
@@ -59,18 +65,20 @@ Handy: `showbridge midi list`, `showbridge midi monitor <device>`.
 
 | Area | Status |
 |---|---|
-| Sources | **MIDI** (APC mini mk2 verified protocol, APC mini community map, custom boards via config/UI) · Stream Deck (USB HID) planned next |
-| Triggers | pressed · released · hold (ms) · value (fader/encoder) |
-| Modes | momentary · toggle (with pad-LED feedback on supporting boards) |
-| Targets | **OSC/UDP** (grandMA3 `/cmd`, `/Page1/FaderNNN`, `/Page1/KeyNNN` + prefix) |
-| Realtime UI | WebSocket ticker + connector status, config hot-reload |
+| Sources | **MIDI** (APC mini mk2 verified protocol, APC mini community map, custom boards via config/UI) · Stream Deck (USB HID) planned next — see TODO.md |
+| Triggers/Modes | pressed · released · hold (ms) · value · momentary · toggle (pad-LED feedback) |
+| Targets | **OSC/UDP** (generic module) · grandMA3 helper module with action presets (Go/GoBack/Pause/Flash/Temp/On/Off/Key/Fader) |
+| Realtime UI | WebSocket ticker + connector status; config hot-reload on UI save *and* disk edits |
+| Config | single portable YAML · UI import/export · hand-editable |
+| Types | backend ⇄ frontend types generated from Go (`make types`, tygo) |
+| Updates | optional self-update from GitHub releases (UI check + in-place install, checksum-verified) |
 | Roadmap | ArtNet / sACN targets, MTC/LTC/ArtNet timecode, OSC feedback → LEDs, MIDI learn→profile wizard, hot-plug detection |
 
 ## Documentation
 
 - **[docs/architecture.md](docs/architecture.md)** — the architecture & build plan, naming conventions, extension guides
 - [docs/midi-devices.md](docs/midi-devices.md) — drivers FAQ, board profiles, adding boards
-- [docs/grandma3.md](docs/grandma3.md) — step-by-step grandMA3 OSC setup
+- Module docs live inside modules: [`internal/targets/osc`](internal/targets/osc/README.md) (generic OSC) · [`internal/helpers/gma3`](internal/helpers/gma3/README.md) (grandMA3 setup + presets)
 - [docs/protocols.md](docs/protocols.md) — REST + WebSocket reference
 - [docs/releasing.md](docs/releasing.md) — versioning, CI releases, CGO per OS
 - [CONTRIBUTING.md](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) (agent/AI-assistant guide)
@@ -82,9 +90,12 @@ cmd/showbridge/        CLI entry (serve, config init, midi list|monitor, version
 internal/core/         domain model: Source/Target interfaces, registry, conductor
 internal/config/       YAML config model + validation
 internal/sources/midi/ MIDI connector (RtMidi, CGO-gated) + board profiles
-internal/targets/osc/  OSC/UDP target
-internal/server/       REST + WebSocket hub + embedded SPA
-web/                   Svelte 5 (runes) UI, SvelteKit SPA → embedded in backend
+internal/targets/osc/  OSC/UDP target module
+internal/helpers/gma3/ grandMA3 action-preset helper module
+internal/server/         REST + WebSocket hub + embedded SPA
+internal/updater/        self-update (GitHub releases, checksum-verified)
+internal/version/        ldflags-stamped build info
+web/                     Svelte 5 (runes) UI, SvelteKit SPA → embedded in backend
 .github/workflows/     ci + release pipelines
 ```
 

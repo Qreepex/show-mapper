@@ -1,0 +1,27 @@
+# tygo — generates TypeScript types from Go structs into web/src/lib/generated/.
+# Run via: make types (go tool tygo generate).
+# RULE: the frontend NEVER hand-writes mirrors of backend wire types —
+# it imports from src/lib/generated/ instead (see web/src/lib/types.ts).
+
+type_mappings:
+  time.Time: "string /* RFC3339 */"
+
+packages:
+  - path: "github.com/yourorg/showbridge/internal/config"
+    output_path: "web/src/lib/generated/config.ts"
+  - path: "github.com/yourorg/showbridge/internal/core"
+    output_path: "web/src/lib/generated/core.ts"
+  - path: "github.com/yourorg/showbridge/internal/server"
+    output_path: "web/src/lib/generated/server.ts"
+    exclude_files:
+      - "server.go"
+      - "hub.go"
+      - "embed.go"
+    type_mappings:
+      config.Config: "Config"
+      core.SnapshotConn: "SnapshotConn"
+    frontmatter: |
+      import type { Config } from "./config";
+      import type { SnapshotConn } from "./core";
+  - path: "github.com/yourorg/showbridge/internal/updater"
+    output_path: "web/src/lib/generated/updater.ts"

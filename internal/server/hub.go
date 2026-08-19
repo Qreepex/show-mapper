@@ -11,14 +11,6 @@ import (
 	"github.com/coder/websocket"
 )
 
-// Envelope is the single wire format for all WebSocket traffic.
-// Message types are dot-namespaced, see docs/protocols.md.
-type Envelope struct {
-	Type string    `json:"type"`
-	TS   time.Time `json:"ts"`
-	Data any       `json:"data"`
-}
-
 // Hub fans out Envelopes to all connected web clients.
 // It implements core.Sink so the conductor can broadcast without importing
 // the HTTP layer.

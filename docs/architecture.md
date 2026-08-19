@@ -1,9 +1,9 @@
 # showbridge — Architecture & Build Plan
 
 This is the system design. Read it before extending the code. Related:
-[midi-devices.md](midi-devices.md) · [grandma3.md](grandma3.md) ·
-[protocols.md](protocols.md) · [releasing.md](releasing.md)
-
+[midi-devices.md](midi-devices.md) · [protocols.md](protocols.md) ·
+[releasing.md](releasing.md) · module docs live in their module dirs
+(e.g. [../internal/helpers/gma3/README.md](../internal/helpers/gma3/README.md)).
 ---
 
 ## 1. What & why
@@ -16,14 +16,22 @@ all activity to the UI in realtime over WebSocket.
 
 Design goals, in order:
 
+0. **Core stays generic.** The top level knows *sources*, *targets*,
+   *bindings* — nothing about grandMA3, Akai, or Elgato. Every device- or
+   console-specific thing (code + docs) lives inside a module directory.
+   The binary runs correctly with any subset — even zero — of modules
+   compiled in (connectors register via `init()`; inclusion is an import list
+   in `cmd/showbridge/main.go`; removing a module = deleting one import).
 1. **Modularity** — new sources and new targets are plugins implementing tiny
    interfaces, discovered by registries; the UI learns about them via
    `/api/meta`. No config schema surgery per connector.
 2. **Boring reliability** — show context: simple, single binary, no external
    services, explicit retry behavior, nothing panics because a USB cable fell out.
 3. **Single-file distribution** — frontend embedded via `go:embed`; one config
-   file; zero installers.
-4. **Hackable** — plain Go, no framework magic; Svelte 5 SPA you can reason about.
+   file; zero installers. Portable: extract-and-run on Windows, macOS, Linux;
+   amd64 + arm64.
+4. **Hackable** — plain Go, no framework magic; Svelte 5 SPA you can reason
+   about; frontend/backend wire types are generated, not hand-mirrored.
 
 Non-goals (v1): multi-user auth, distributed operation, playlists/cue stacks,
 MIDI routing between apps.
@@ -119,6 +127,14 @@ Sections (full annotated version: [../showbridge.example.yaml](../showbridge.exa
 Validation rules are centralized in `internal/config` (`Validate`) and the
 lists exposed via `/api/meta` keep the UI schema-agnostic.
 
+**Config lifecycle:** one portable YAML — copy it machine→machine as-is.
+Every apply path validates → persists atomically → hot-reloads connectors:
+(a) UI save (`PUT /api/config`), (b) full YAML import/export via UI
+(`POST /api/config/import`, `GET /api/config/export`), (c) hand edits of the
+file itself (fsnotify watcher, debounced, de-duplicated against our own
+saves). Saved YAML is normalized to 2-space indentation — same style as the
+examples — so hand-written entries never fight the writer’s formatting.
+
 ---
 
 ## 5. Connector model
@@ -130,6 +146,18 @@ lists exposed via `/api/meta` keep the UI schema-agnostic.
 package's `init()`; `cmd/showbridge/main.go` imports connectors explicitly
 (listed there). `TypeInfo` includes the **option field schema**
 (`[]FieldSpec`) so the Settings UI renders forms it knows nothing about.
+
+### 5.1b Helper modules & action presets
+
+Connectors stay 100% generic; *readiness conveniences* for a specific
+ecosystem (e.g. grandMA3's Go/Flash/Temp/On/Off vocabulary) ship as **helper
+modules** under `internal/helpers/<name>` that register **action presets**
+(`core.RegisterActionPreset`). Presets are authoring-time sugar: the UI lists
+them via `/api/meta`, the user fills the preset's fields, and
+`POST /api/presets/resolve` turns them into a plain `config.ActionConfig`
+stored in the binding — core never sees vendor concepts and presets have zero
+runtime cost. Project rule: all module-specific code *and documentation* live
+inside the module dir (example: `internal/helpers/gma3/README.md`).
 
 ### 5.2 Adding a source — checklist (worked example: **Stream Deck**, the planned next step)
 
@@ -168,7 +196,7 @@ package's `init()`; `cmd/showbridge/main.go` imports connectors explicitly
 ### 5.4 Network plan (answers "interfaces must be configurable")
 
 - **OSC (now):** per-target `host`, `port`, `prefix`. (MA3 quirk: each OSC row
-  uses one port for both directions — docs/grandma3.md.)
+  uses one port for both directions — see internal/helpers/gma3/README.md.)
 - **ArtNet/sACN (plan):** per-target `interface` (local NIC IP to bind),
   `universe`, unicast destination vs broadcast/multicast, TTL/priority. UI
   will offer a NIC dropdown via an inspector on the target side (inspector is
@@ -189,6 +217,9 @@ config/UI — the same runtime `Profile` object is built from both sources.
 
 ## 6. Frontend architecture
 
+- **Wire types are generated, never hand-mirrored** (`tygo.yaml`,
+  `make types` → `web/src/lib/generated/*`). Hand-written UI-only helpers
+  live in `web/src/lib/types.ts`. CI fails if generated files went stale.
 - **Svelte 5 SPA** (runes only; enforced by project policy + svelte-check),
   SvelteKit with `@sveltejs/adapter-static`, `ssr=false`, `prerender=true`,
   fallback `200.html`. Build output lands in `internal/server/dist/` and is
@@ -198,9 +229,9 @@ config/UI — the same runtime `Profile` object is built from both sources.
   connection state, snapshot, connector statuses and the event ticker;
   auto-reconnect with backoff.
 - **Routes**: `/` dashboard (connectors, MIDI discovery, live ticker),
-  `/mappings` (binding editor; control picker fed from profile metadata +
-  free-text for raw `note:N`/`cc:N` discoveries), `/settings` (HTTP, sources,
-  targets, custom board editor).
+  `/mappings` (bindings editor incl. action presets + control picker from
+  profile metadata with free-text raw `note:N`/`cc:N` escapes), `/settings`
+  (HTTP, sources, targets, custom board editor, config import/export).
 - Dev loop: `vite dev` on :5173 proxies `/api` + `/ws` → :8080 — no CORS,
   no origin juggling.
 
@@ -211,7 +242,8 @@ config/UI — the same runtime `Profile` object is built from both sources.
 Single WS endpoint `/ws`, JSON `Envelope{type, ts, data}`; dot-namespaced
 types: `state.snapshot` (on connect), `source.event`, `target.action`,
 `connector.status`, `config.updated`; inbound reserved as `client.*`.
-REST: `/api/health|meta|config|state`, `/api/sources/{type}/inspect`.
+REST: `/api/health|meta|config|state` · config `export|import` ·
+`POST /api/presets/resolve` · `/api/sources/{type}/inspect`.
 Full reference with payloads: [protocols.md](protocols.md).
 
 ---
@@ -223,10 +255,11 @@ CGO is unavoidable for real device I/O (RtMidi C++). Therefore:
 - **Dev/CI fast path**: `CGO_ENABLED=0` compiles everything (stub MIDI),
   tests run everywhere, no toolchain needed.
 - **Releases**: native builders per OS/arch in GitHub Actions
-  (no cross-compilation of C++): linux/amd64 (gcc+ALSA headers),
+  (no cross-compilation of C++): linux/amd64 + linux/arm64 (gcc+ALSA headers),
   windows/amd64 (MinGW-w64 gcc), darwin/amd64 + darwin/arm64 (clang).
-  Version via git tag → ldflags into `internal/version`. Details + how to add
-  linux/arm64 or local snapshot builds: [releasing.md](releasing.md).
+  Version via git tag → ldflags into `internal/version`. The same assets feed
+  the built-in self-updater (checksums validated). Details + platform notes:
+  [releasing.md](releasing.md).
 
 ---
 
@@ -284,7 +317,7 @@ items, deliberately flagged rather than done half-heartedly.
 
 | Milestone | Content |
 |---|---|
-| **v0.1** (this scaffold) | MIDI sources (built-in + custom boards), OSC target ↔ grandMA3, WS UI, CI/CD |
+| **v0.1** (this scaffold) | MIDI sources (built-in + custom boards), OSC target + grandMA3 presets, WS UI, config import/export + disk hot-reload, self-update checker, CI/CD |
 | v0.2 | Stream Deck source (HID), MIDI-learn→custom-profile wizard in UI, OSC input for LED feedback |
 | v0.3 | ArtNet + sACN targets, NIC pickers, unicast/multicast |
 | v0.4 | Timecode (MTC in/out, LTC via audio, ArtNet timecode), master clock distribution |

@@ -26,6 +26,10 @@ jobs:
           cache: true
       - run: go vet ./...
       - run: go test ./...
+      - name: generated types are fresh (web/src/lib/generated)
+        run: |
+          go tool tygo generate
+          git diff --exit-code -- web/src/lib/generated
 
   lint:
     name: golangci-lint

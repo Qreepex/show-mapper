@@ -24,7 +24,9 @@ Dev loop: `make run` (API :8080) + `make web-dev` (UI :5173, hot reload).
   `npm run check`, `npm run build`.
 - Conventional commits: `feat(midi): add apc-40 profile`, `fix(osc): …`.
   Scopes: `config, conductor, midi, osc, streamdeck, server, web, ci, docs, deps`.
-- Update docs in the same PR (README status table if applicable).
+- Update docs in the same PR (README status table if applicable). Wire-type
+  changes (Go structs ↔ UI) must regenerate types: `make types` and commit
+  `web/src/lib/generated/*` (CI enforces freshness).
 - New dependency? Justify in the PR description (license + audit note).
 - Don't commit `showbridge.yaml`, built frontend assets, or secrets.
 
@@ -43,7 +45,7 @@ Dev loop: `make run` (API :8080) + `make web-dev` (UI :5173, hot reload).
 
 Good first issues: APC 20 / APC 40 mk1+mk2 profiles (they're requested by the
 project owner!), LED palette verification for `apc-mini` (mk1), custom-board
-UI polish.
+MIDI-learn→profile wizard, Stream Deck source (HIDs, see AGENTS.md recipes).
 
 ## Adding connectors
 

@@ -31,6 +31,10 @@ import (
 	// (internal/sources/streamdeck, internal/targets/artnet, ...).
 	"github.com/yourorg/showbridge/internal/sources/midi"
 	_ "github.com/yourorg/showbridge/internal/targets/osc"
+
+	// Helper modules (action presets etc.) — each is self-contained with its
+	// own docs and can be removed from this import list without core changes.
+	_ "github.com/yourorg/showbridge/internal/helpers/gma3"
 )
 
 func main() {
@@ -104,21 +108,55 @@ func cmdServe(args []string) int {
 		slog.Info("hint: run `showbridge config init` to create a starter config")
 		return 2
 	}
+	cfg := cfgFile.Get()
 	if *listen != "" {
-		cfgFile.Config.HTTP.Listen = *listen
+		cfg.HTTP.Listen = *listen
+		cfgFile.Set(cfg)
 	}
 	slog.Info("config loaded", "path", cfgFile.Path,
-		"sources", len(cfgFile.Config.Sources), "targets", len(cfgFile.Config.Targets),
-		"bindings", len(cfgFile.Config.Bindings))
+		"sources", len(cfg.Sources), "targets", len(cfg.Targets),
+		"bindings", len(cfg.Bindings))
 
 	hub := server.NewHub()
-	cond := core.NewConductor(cfgFile.Config, hub)
+	cond := core.NewConductor(cfgFile.Get(), hub)
 	srv := server.New(cfgFile, cond, hub)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	go cond.Run(ctx)
+
+	// Optional startup update check (updates.autoCheck).
+	if u := cfg.Updates; u != nil && u.AutoCheck && u.Repo != "" {
+		go func() {
+			st := srv.CheckForUpdate()
+			switch {
+			case st.Available:
+				slog.Info("update available", "current", st.Current, "latest", st.LatestVersion, "url", st.LatestURL)
+			case st.Error != "":
+				slog.Debug("update check failed", "err", st.Error)
+			}
+		}()
+	}
+
+	// Hot-reload on hand edits of the config file (docs/architecture.md §4).
+	go watchConfig(ctx, cfgFile.Path, func() {
+		fresh, err := config.LoadPath(cfgFile.Path)
+		if err != nil {
+			slog.Warn("config file changed but failed to load", "err", err)
+			return
+		}
+		if config.Equal(cfgFile.Get(), fresh.Get()) {
+			return // our own Save() — already applied
+		}
+		if err := cond.Reload(fresh.Get()); err != nil {
+			slog.Warn("config reload failed", "err", err)
+			return
+		}
+		cfgFile.Set(fresh.Get())
+		slog.Info("config reloaded from disk", "path", cfgFile.Path)
+		hub.Broadcast("config.updated", fresh.Get())
+	})
 
 	if err := srv.Run(ctx); err != nil {
 		slog.Error("server stopped with error", "err", err)

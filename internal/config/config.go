@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 )
@@ -32,6 +33,10 @@ var idRule = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,63}$`)
 type Config struct {
 	Version int        `yaml:"version" json:"version"`
 	HTTP    HTTPConfig `yaml:"http" json:"http"`
+	// Updates, if set, configures the self-update checker
+	// (see internal/updater). Disabled when nil or repo empty.
+	Updates *UpdatesConfig `yaml:"updates,omitempty" json:"updates,omitempty"`
+
 	// Profiles holds USER-DEFINED device profiles ("custom boards").
 	// Built-in profiles (e.g. MIDI profile apc-mini-mk2) ship with the binary;
 	// this section lets users describe any other hardware — see
@@ -41,6 +46,14 @@ type Config struct {
 	Targets  []TargetConfig  `yaml:"targets" json:"targets"`
 	Bindings []Binding       `yaml:"bindings" json:"bindings"`
 }
+
+// UpdatesConfig configures update checking (GitHub releases of `repo`).
+type UpdatesConfig struct {
+	Repo      string `yaml:"repo" json:"repo"`                     // "owner/name"
+	AutoCheck bool   `yaml:"autoCheck,omitempty" json:"autoCheck"` // check on startup
+}
+
+var repoRule = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
 
 // ProfileConfig describes a user-defined device profile.
 //
@@ -193,7 +206,7 @@ type ActionConfig struct {
 
 	// ValueType selects the wire representation for numeric payloads:
 	// "int" (int32) or "float" (float32). Default "int" — grandMA3 faders
-	// expect integers, see docs/grandma3.md.
+	// expect integers, see internal/helpers/gma3/README.md.
 	ValueType string `yaml:"valueType,omitempty" json:"valueType,omitempty"`
 }
 
@@ -261,10 +274,26 @@ func Candidates() []string {
 	return out
 }
 
-// Path is the resolved config file location (set by Load, used by Save).
+// File is a loaded config plus thread-safe accessors.
+// Path is where Save() writes (set by Load/LoadPath).
 type File struct {
-	Config Config
-	Path   string
+	mu   sync.RWMutex
+	cfg  Config
+	Path string
+}
+
+// Get returns the current config (copy).
+func (f *File) Get() Config {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.cfg
+}
+
+// Set replaces the config.
+func (f *File) Set(c Config) {
+	f.mu.Lock()
+	f.cfg = c
+	f.mu.Unlock()
 }
 
 // Load finds and parses the config file. If none exists it returns an error
@@ -279,7 +308,7 @@ func Load() (*File, error) {
 		if err != nil {
 			return nil, fmt.Errorf("parsing %s: %w", p, err)
 		}
-		return &File{Config: cfg, Path: p}, nil
+		return &File{cfg: cfg, Path: p}, nil
 	}
 	return nil, fmt.Errorf("no config file found (looked in: %s) — run `showbridge config init`",
 		strings.Join(Candidates(), ", "))
@@ -295,7 +324,7 @@ func LoadPath(path string) (*File, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing %s: %w", path, err)
 	}
-	return &File{Config: cfg, Path: path}, nil
+	return &File{cfg: cfg, Path: path}, nil
 }
 
 // Normalize applies defaults and validates a config that was NOT decoded
@@ -321,8 +350,11 @@ func Parse(data []byte) (Config, error) {
 
 // Save writes the config atomically (temp file + rename) to f.Path.
 func (f *File) Save() error {
-	f.Config.Version = SchemaVersion
-	data, err := yaml.Marshal(&f.Config)
+	f.mu.RLock()
+	cfg := f.cfg
+	f.mu.RUnlock()
+	cfg.Version = SchemaVersion
+	data, err := MarshalYAML(&cfg)
 	if err != nil {
 		return err
 	}
@@ -380,6 +412,9 @@ func (c Config) Validate() error {
 	}
 	if c.HTTP.Listen == "" {
 		errs = append(errs, errors.New("http.listen must not be empty"))
+	}
+	if c.Updates != nil && c.Updates.Repo != "" && !repoRule.MatchString(c.Updates.Repo) {
+		errs = append(errs, fmt.Errorf("updates.repo %q must look like \"owner/name\"", c.Updates.Repo))
 	}
 
 	srcIDs := map[string]bool{}
@@ -517,6 +552,27 @@ func (a ActionConfig) validate(where string) []error {
 		errs = append(errs, fmt.Errorf("%s: action.valueType must be %q or %q", where, ValueTypeInt, ValueTypeFloat))
 	}
 	return errs
+}
+
+// MarshalYAML renders a config in the canonical hand-editable style
+// (2-space indents — the same style as showbridge.example.yaml, so
+// hand-appended entries and app-saved files don't clash).
+func MarshalYAML(c *Config) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(c); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), enc.Close()
+}
+
+// Equal reports whether two configs marshal to the same YAML.
+// Used by the config-file watcher to skip self-inflicted saves.
+func Equal(a, b Config) bool {
+	ya, ea := MarshalYAML(&a)
+	yb, eb := MarshalYAML(&b)
+	return ea == nil && eb == nil && bytes.Equal(ya, yb)
 }
 
 func contains(list []string, s string) bool {

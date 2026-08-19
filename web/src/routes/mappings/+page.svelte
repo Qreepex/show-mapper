@@ -7,7 +7,6 @@
     Config,
     Meta,
     Mode,
-    ProfileControl,
     Trigger,
   } from "$lib/types";
 
@@ -15,6 +14,10 @@
   let cfg = $state<Config | null>(null);
   let draft = $state<Binding[]>([]);
   let saveMsg = $state<{ text: string; ok: boolean } | null>(null);
+
+  // Per-row preset selection + params (helper-module sugar, e.g. "gma3.go").
+  let presetSel = $state<Record<number, { id: string; params: Record<string, string> }>>({});
+  let presetMsg = $state<{ row: number; text: string; ok: boolean } | null>(null);
 
   onMount(async () => {
     [meta, cfg] = await Promise.all([api.meta(), api.config()]);
@@ -32,7 +35,7 @@
     if (builtin) return builtin.controls.map((c) => ({ id: c.id, label: c.label }));
     const custom = (cfg.profiles ?? [])
       .filter((p) => p.type === src.type && p.id === src.profile)
-      .flatMap((p) => p.controls as ProfileControl[]);
+      .flatMap((p) => p.controls);
     return custom.map((c) => ({ id: c.id, label: c.label }));
   }
 
@@ -51,6 +54,28 @@
 
   function removeBinding(i: number) {
     draft.splice(i, 1);
+    presetMsg = null;
+  }
+
+  // ---- presets ------------------------------------------------------------
+
+  function presetOf(i: number) {
+    if (!presetSel[i]) presetSel[i] = { id: "", params: {} };
+    return presetSel[i];
+  }
+  function presetMeta(id: string) {
+    return meta?.presets.find((p) => p.id === id);
+  }
+  async function applyPreset(i: number) {
+    const sel = presetOf(i);
+    if (!sel.id) return;
+    presetMsg = null;
+    try {
+      draft[i].action = await api.resolvePreset(sel.id, sel.params);
+      presetMsg = { row: i, text: `Preset ${sel.id} applied.`, ok: true };
+    } catch (e) {
+      presetMsg = { row: i, text: e instanceof ApiError ? e.errors.join("; ") : String(e), ok: false };
+    }
   }
 
   async function save() {
@@ -96,6 +121,8 @@
     {/if}
 
     {#each draft as b, i (i)}
+      {@const sel = presetOf(i)}
+      {@const pm = presetMeta(sel.id)}
       <div class="card bind">
         <div class="rowline">
           <div>
@@ -152,6 +179,41 @@
           </div>
           <button class="danger del" title="Remove binding" onclick={() => removeBinding(i)}>✕</button>
         </div>
+
+        {#if meta.presets.length > 0}
+          <div class="rowline presetline">
+            <div>
+              <label for={"preset-" + i}>Preset (optional)</label>
+              <select id={"preset-" + i} value={sel.id}
+                onchange={(e) => { sel.id = e.currentTarget.value; }}>
+                <option value="">— fill action manually below —</option>
+                {#each meta.presets as p (p.id)}
+                  <option value={p.id}>{p.label}</option>
+                {/each}
+              </select>
+            </div>
+            {#if pm}
+              {#each pm.fields as f (f.name)}
+                <div>
+                  <label for={"preset-" + i + "-" + f.name}>{f.label}</label>
+                  <input id={"preset-" + i + "-" + f.name} type={f.type === "number" ? "number" : "text"}
+                    placeholder={f.help ?? ""}
+                    value={sel.params[f.name] ?? String(f.default ?? "")}
+                    oninput={(e) => { sel.params[f.name] = e.currentTarget.value; }} />
+                </div>
+              {/each}
+              <div class="spacer">
+                <button onclick={() => applyPreset(i)}>Apply preset ↓</button>
+              </div>
+            {/if}
+          </div>
+          {#if pm?.help}
+            <p class="muted preset-help">{pm.help}</p>
+          {/if}
+          {#if presetMsg && presetMsg.row === i}
+            <p class={presetMsg.ok ? "flash-ok" : "flash-err"}>{presetMsg.text}</p>
+          {/if}
+        {/if}
 
         <div class="rowline">
           <div>
@@ -253,4 +315,7 @@
   .rowline { display: flex; gap: 0.8rem; align-items: flex-end; margin-bottom: 0.6rem; flex-wrap: wrap; }
   .grow { flex: 1; min-width: 200px; }
   .del { margin-left: auto; }
+  .presetline { background: rgba(127, 212, 255, 0.04); padding: 0.5rem; border-radius: 0.4rem; }
+  .presetline .spacer { align-self: flex-end; }
+  .preset-help { margin: -0.3rem 0 0.6rem; font-size: 0.8rem; }
 </style>

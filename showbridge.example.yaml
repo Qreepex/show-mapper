@@ -12,6 +12,13 @@ http:
   # show network — there is NO authentication yet (see docs/architecture.md#security).
   listen: 127.0.0.1:8080
 
+# --- Self-update (optional) ----------------------------------------------------
+# Checks this GitHub repo's releases for a newer showbridge build; the UI shows
+# a banner and can download+install (checksum-verified) in place.
+# updates:
+#   repo: owner/repo        # e.g. yourname/showbridge — empty = feature off
+#   autoCheck: false        # check on startup
+
 # --- Custom boards (user-defined device profiles) -----------------------------
 # Built-ins ship with the binary (MIDI: apc-mini-mk2, apc-mini).
 # Any other board can be described here in YAML or via the UI (Settings →
@@ -51,7 +58,7 @@ targets:
                                       # (Menu > In & Out > OSC). MA3 uses one
                                       # port for both send and receive per row.
       prefix: ""                      # optional; matches the row's Prefix.
-                                      # GrandMA3-side setup: docs/grandma3.md
+                                      # GrandMA3-side setup: internal/helpers/gma3/README.md
 
 # --- Bindings (control -> action) ------------------------------------------------
 bindings:
@@ -71,7 +78,7 @@ bindings:
     led: { color: green, mode: on }   # optional: board LED for the "on" state
 
   # 2) Run a grandMA3 keyword command on press (needs "Receive Command" in MA3's
-  #    OSC row). Docs: docs/grandma3.md
+  #    OSC row). Docs: internal/helpers/gma3/README.md
   - id: go-202
     source: wing
     control: pad-0-1

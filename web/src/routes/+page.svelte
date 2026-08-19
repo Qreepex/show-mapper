@@ -1,9 +1,50 @@
 <script lang="ts">
   import { live } from "$lib/ws.svelte";
-  import { api } from "$lib/api";
+  import { api, ApiError } from "$lib/api";
   import type { ConnectorState } from "$lib/types";
 
   let inspectResult = $state<string | null>(null);
+  let updateBusy = $state(false);
+  let updateMsg = $state<{ text: string; ok: boolean } | null>(null);
+  let updateLoaded = $state(false);
+  import { onMount } from "svelte";
+
+  onMount(async () => {
+    try {
+      live.update = await api.updateStatus();
+    } catch {
+      /* update check unavailable — fine */
+    }
+    updateLoaded = true;
+  });
+
+  async function checkUpdate() {
+    updateBusy = true;
+    updateMsg = null;
+    try {
+      live.update = await api.updateCheck();
+      updateMsg = live.update.available
+        ? { text: `v${live.update.latestVersion} available.`, ok: true }
+        : { text: live.update.error || "You're up to date.", ok: true };
+    } catch (e) {
+      updateMsg = { text: e instanceof ApiError ? e.errors.join("; ") : String(e), ok: false };
+    } finally {
+      updateBusy = false;
+    }
+  }
+
+  async function applyUpdate() {
+    updateBusy = true;
+    updateMsg = null;
+    try {
+      const r = await api.updateApply();
+      updateMsg = { text: r.message, ok: true };
+    } catch (e) {
+      updateMsg = { text: e instanceof ApiError ? e.errors.join("; ") : String(e), ok: false };
+    } finally {
+      updateBusy = false;
+    }
+  }
 
   async function listMidiPorts() {
     inspectResult = "…";
@@ -37,6 +78,16 @@
 </script>
 
 <h1>Dashboard</h1>
+
+{#if live.update?.available}
+  <div class="card update-banner">
+    <strong>⬆ Update available:</strong>
+    v{live.update.latestVersion}
+    <span class="muted">(running {live.update.current})</span>
+    <button class="primary" onclick={applyUpdate} disabled={updateBusy}>Download &amp; install</button>
+    <a href={live.update.latestURL} target="_blank" rel="noreferrer">release notes</a>
+  </div>
+{/if}
 
 <div class="grid two">
   <div class="card">
@@ -82,6 +133,20 @@
 </div>
 
 <div class="card" style="margin-top:1rem">
+  <h2>Software update</h2>
+  <div class="row">
+    <button onclick={checkUpdate} disabled={updateBusy}>Check now</button>
+    {#if updateMsg}
+      <span class={updateMsg.ok ? "flash-ok" : "flash-err"}>{updateMsg.text}</span>
+    {:else if updateLoaded && live.update && !live.update.configured}
+      <span class="muted">
+        Not configured — set <code>updates.repo</code> (&quot;owner/repo&quot;) in Settings → Updates.
+      </span>
+    {/if}
+  </div>
+</div>
+
+<div class="card" style="margin-top:1rem">
   <h2>Live activity</h2>
   {#if live.ticker.length === 0}
     <p class="muted">No events yet — press a button on your board.</p>
@@ -112,4 +177,11 @@
   .grid.two { grid-template-columns: 1fr 1fr; }
   code { background: var(--panel-2); padding: 0 0.3em; border-radius: 0.3em; }
   pre { white-space: pre-wrap; }
+  .update-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+    border-color: var(--ok);
+  }
 </style>

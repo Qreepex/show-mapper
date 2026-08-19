@@ -27,6 +27,11 @@ CI runs: `go vet`, `go test`, `go build` (CGO off), `npm run check`, `npm run bu
 
 ## Architecture invariants (do not break)
 
+0. **Core is generic; modules are self-contained.** No device/vendor/console
+   names in core code, core docs, or top-level README. Every module
+   (`internal/sources/<x>`, `internal/targets/<x>`, `internal/helpers/<x>`)
+   carries its **own** README.md. The app must boot with zero modules
+   compiled; removing a module = deleting one import in `cmd/showbridge/main.go`.
 1. **`internal/core` owns the domain model and must not import connectors.**
    Sources/targets register via `core.RegisterSource/RegisterTarget` from their
    package `init()`; `cmd/showbridge/main.go` imports connectors (one blank
@@ -63,20 +68,33 @@ CI runs: `go vet`, `go test`, `go build` (CGO off), `npm run check`, `npm run bu
 - `gofmt`/`go vet` clean; table-driven tests for mapping logic; keep connector
   code side-effect free outside `Connect()`.
 - No new dependency without a short justification in the PR (current set:
-  yaml.v3, coder/websocket, go-osc, gomidi's bundled rtmidi binding).
+  yaml.v3, coder/websocket, go-osc, gomidi's bundled rtmidi binding, fsnotify,
+  rhysd/go-github-selfupdate, tygo as a build-time *tool*).
+- **Wire types aren't written twice.** TS ⇔ Go sharing comes from tygo:
+  edit the Go struct → `make types` (or `go tool tygo generate`) → commit the
+  regenerated `web/src/lib/generated/*`. Never hand-edit those files; CI
+  diffs them. `server/wire.go` is the WS-targeted set; config/core structs
+  generate from their packages.
 - Version stamping only via `internal/version` ldflags (see docs/releasing.md).
 
 ## Common recipes
 
 ### Add a target connector (e.g. ArtNet/sACN)
 1. Create `internal/targets/<type>/` implementing `core.Target`
-   (`ID/Type/Connect/Send/Close/Status`).
+   (`ID/Type/Connect/Send/Close/Status`) + a module README.md.
 2. In `init()`: `core.RegisterTarget("<type>", core.TypeInfo{...options schema...}, NewTarget)`.
 3. Blank-import it in `cmd/showbridge/main.go`.
 4. Decide how `core.Action` maps to your protocol (extend `ActionConfig` in
    `internal/config` if you need new semantics — update `Validate`,
-   `ActionTypes`, tests, `web/src/lib/types.ts`, docs).
+   `ActionTypes`, tests, `make types`, docs).
 5. Tests + docs/architecture.md “Connectors” table + README status table.
+
+### Add an action-preset helper module (e.g. a new console family)
+1. Create `internal/helpers/<name>/` with an `init()` calling
+   `core.RegisterActionPreset(...)` per preset + README.md with the console
+   setup instructions.
+2. Blank-import in `main.go`. The UI picks it up automatically via `/api/meta`.
+   Working example: `internal/helpers/gma3`.
 
 ### Add a source connector (e.g. Elgato Stream Deck) — next planned
 See docs/architecture.md#adding-a-source for the full checklist incl.
@@ -90,7 +108,7 @@ with `showbridge midi monitor` before merging; mark unverified data with
 `TODO(hardware)` like `apcMini()` does.
 
 ### Change the WS/REST contract
-Update `docs/protocols.md` + `web/src/lib/types.ts` in the same PR.
+Update `docs/protocols.md` + the Go structs + `make types` in the same PR.
 
 ## Naming conventions (summary; full list in architecture.md §Naming)
 

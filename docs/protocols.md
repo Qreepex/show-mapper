@@ -9,9 +9,15 @@ contract; change code + types (`web/src/lib/types.ts`) + this doc together.
 | Method | Path | Body → Response | Purpose |
 |---|---|---|---|
 | GET | `/api/health` | → `{ok, version, clients}` | liveness + ws client count |
-| GET | `/api/meta` | → `{version, commit, sourceTypes[], targetTypes[], triggers, modes, actionTypes, controlKinds, ledStyles, customProfiles}` | everything the UI needs to render schema-agnostically |
+| GET | `/api/meta` | → `{version, commit, sourceTypes[], targetTypes[], triggers, modes, actionTypes, controlKinds, ledStyles, presets[], customProfiles}` | everything the UI needs to render schema-agnostically (`presets` = helper-module action presets) |
 | GET | `/api/config` | → `Config` | current config |
 | PUT | `/api/config` | `Config` → `{ok:true}` or `400 {ok:false, errors:[...]}` | validate → persist (atomic) → hot-reload connectors → broadcast `config.updated`. Unknown JSON fields are rejected. |
+| GET | `/api/config/export` | → YAML download (`Content-Disposition: attachment`) | full config as portable YAML (2-space style, hand-editable) |
+| POST | `/api/config/import` | YAML body → `{ok:true}` | replace the whole config from an uploaded YAML file (validate → persist → reload) |
+| POST | `/api/presets/resolve` | `{id, params{}}` → `ActionConfig` | build a concrete action from a helper-module preset (e.g. `gma3.go`, `{"page":"1","executor":"201"}`) |
+| GET | `/api/update/status` | → `UpdateStatus` | last known update state (no network unless repo changed) |
+| POST | `/api/update/check` | → `UpdateStatus` | query GitHub releases now; broadcasts `update.available` when newer |
+| POST | `/api/update/apply` | → `{ok, message}` | download + install the detected release (checksum-verified; restart app after) |
 | GET | `/api/state` | → `{connectors: [{id, kind, type, status{state, detail}, controls?}], configPath}` | runtime connector snapshot |
 | GET | `/api/sources/{type}/inspect` | → `{ok:true, result:{...}}` or `{ok:false, error}` | connector-provided enumeration. For `midi`: `result = {in:[{number,name}], out:[…]}`; non-CGO builds return ok:false with a hint. 404 if the type has no inspector. |
 
@@ -36,6 +42,7 @@ contract; change code + types (`web/src/lib/types.ts`) + this doc together.
 | `target.action` | `{binding, ok, error?, action{target, kind, address, args}}` | after each dispatched action (ok=false on send failure) |
 | `connector.status` | `{id, kind: source\|target, type, status{state, detail}}` | connect/error/connected transitions |
 | `config.updated` | `Config` | after a successful `PUT /api/config` (any client) |
+| `update.available` | `UpdateStatus` | when an update check (startup or manual) found a newer release |
 
 ### Client → server
 
@@ -51,6 +58,13 @@ Single source of truth is the backend (`/api/meta` mirrors them):
 `controlKinds: [pad, button, fader, encoder]` ·
 `ledStyles: [none, onOff, velocity, apc2-rgb]` · status states:
 `connecting|connected|disconnected|error`.
+
+## Types
+
+Backend ⇄ frontend types match by construction: TS interfaces are generated
+from the Go structs with tygo (`make types` → `web/src/lib/generated/*`,
+config: `tygo.yaml`). Hand-editing generated files is forbidden (CI checks
+freshness via `git diff --exit-code`).
 
 ## Worked example
 

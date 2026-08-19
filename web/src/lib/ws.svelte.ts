@@ -1,12 +1,14 @@
 // Realtime state built on Svelte 5 runes — a class holding $state mirrors of
 // the backend's WebSocket stream. No stores (project rule: runes only).
+// All wire types come from backend-generated types (see ./types).
 import type {
   Config,
   ConnectorState,
   Envelope,
-  SnapshotData,
+  Snapshot,
   SourceEvent,
   TargetAction,
+  UpdateStatus,
 } from "./types";
 
 export type WsState = "connecting" | "open" | "reconnecting" | "closed";
@@ -38,8 +40,12 @@ function summarize(msg: Envelope): TickerEntry | null {
       return { ts, kind: "target.action", text, ok: d.ok };
     }
     case "connector.status": {
-      const d = msg.data as { id: string; kind: string; status: { state: string; detail: string } };
-      return { ts, kind: "connector.status", text: `${d.kind} ${d.id}: ${d.status.state} — ${d.status.detail}` };
+      const d = msg.data as ConnectorState;
+      return {
+        ts,
+        kind: "connector.status",
+        text: `${d.kind} ${d.id}: ${d.status.state} — ${d.status.detail}`,
+      };
     }
     default:
       return null;
@@ -53,6 +59,7 @@ class Live {
   config = $state<Config | null>(null);
   connectors = $state<ConnectorState[]>([]);
   ticker = $state<TickerEntry[]>([]);
+  update = $state<UpdateStatus | null>(null);
 
   #socket: WebSocket | null = null;
   #retries = 0;
@@ -79,6 +86,10 @@ class Live {
     sock.onmessage = (ev) => this.#onMessage(ev);
   }
 
+  disconnect() {
+    this.#socket?.close();
+  }
+
   #scheduleReconnect() {
     this.#retries++;
     const delay = Math.min(5000, 500 * this.#retries);
@@ -94,7 +105,7 @@ class Live {
     }
     switch (msg.type) {
       case "state.snapshot": {
-        const d = msg.data as SnapshotData;
+        const d = msg.data as Snapshot;
         this.version = d.version;
         this.commit = d.commit;
         this.config = d.config;
@@ -113,6 +124,10 @@ class Live {
       }
       case "config.updated": {
         this.config = msg.data as Config;
+        break;
+      }
+      case "update.available": {
+        this.update = msg.data as UpdateStatus;
         break;
       }
     }

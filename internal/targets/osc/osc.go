@@ -1,6 +1,7 @@
-// Package osc implements the OSC output target (Open Sound Control over UDP),
-// the primary protocol for remote-controlling a grandMA3 console.
-// See docs/grandma3.md for the console-side configuration.
+// Package osc implements the generic OSC output target (Open Sound Control
+// over UDP) — one of possibly many target modules. Module docs: README.md in
+// this directory; receiver-specific setup (e.g. grandMA3) is documented in
+// the helper module internal/helpers/gma3/README.md.
 package osc
 
 import (
@@ -76,7 +77,7 @@ func (t *Target) Connect(_ context.Context) error {
 }
 
 // Send dispatches one resolved action as one OSC message.
-// (grandMA3 does not support OSC bundles — see docs/grandma3.md.)
+// (grandMA3 does not support OSC bundles — see internal/helpers/gma3/README.md.)
 func (t *Target) Send(a core.Action) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()

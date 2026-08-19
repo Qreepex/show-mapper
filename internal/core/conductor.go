@@ -385,6 +385,14 @@ func (c *Conductor) updateFeedback(src Source, b config.Binding, on bool) {
 	}
 }
 
+// ActionReport is broadcast as "target.action" after each dispatch.
+type ActionReport struct {
+	Binding string `json:"binding"`
+	Ok      bool   `json:"ok"`
+	Error   string `json:"error,omitempty"`
+	Action  Action `json:"action"`
+}
+
 func (c *Conductor) send(b config.Binding, act Action) {
 	c.mu.Lock()
 	tgt, ok := c.targets[b.Target]
@@ -394,13 +402,13 @@ func (c *Conductor) send(b config.Binding, act Action) {
 		return
 	}
 
-	result := map[string]any{"binding": b.Key(), "ok": true, "action": act}
+	report := ActionReport{Binding: b.Key(), Ok: true, Action: act}
 	if err := tgt.Send(act); err != nil {
-		result["ok"] = false
-		result["error"] = err.Error()
+		report.Ok = false
+		report.Error = err.Error()
 		slog.Warn("send failed", "target", tgt.ID(), "err", err)
 	}
-	c.sink.Broadcast("target.action", result)
+	c.sink.Broadcast("target.action", report)
 }
 
 func (c *Conductor) shutdownInstances() {

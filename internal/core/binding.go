@@ -70,7 +70,7 @@ func valueAction(b config.Binding, v float64) (Action, bool) {
 }
 
 // numericArg converts a float to the wire type: int32 (rounded) or float32.
-// grandMA3 expects ints for executor faders (see docs/grandma3.md).
+// grandMA3 expects ints for executor faders (see internal/helpers/gma3/README.md).
 func numericArg(v float64, valueType string) any {
 	if valueType == config.ValueTypeFloat {
 		return float32(v)
