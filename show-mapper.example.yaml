@@ -10,7 +10,7 @@ version: 1
 http:
   # Web UI + REST API + WebSocket. Bind localhost unless you're on a trusted
   # show network — there is NO authentication yet (see docs/architecture.md#security).
-  listen: 127.0.0.1:8080
+  listen: 127.0.0.1:8484
 
 # --- Self-update (optional) ----------------------------------------------------
 # Checks this GitHub repo's releases for a newer show-mapper build; the UI shows
@@ -26,56 +26,59 @@ http:
 # `show-mapper midi monitor <device>`. Details: docs/midi-devices.md#custom-boards
 profiles:
   - id: my-x-touch
-    type: midi                        # connector type the profile belongs to
+    type: midi # connector type the profile belongs to
     name: Behringer X-Touch Compact (example)
-    match: ["X-TOUCH"]                # port-name substrings for auto-detection
+    match: ["X-TOUCH"] # port-name substrings for auto-detection
     led:
-      style: onOff                    # none | onOff | velocity | apc2-rgb
+      style: onOff # none | onOff | velocity | apc2-rgb
       # onVelocity: 127               # for style onOff (default 127)
       # colors: { red: 3, green: 1 }  # for style velocity (name -> velocity)
     controls:
-      - { id: enc-1,   kind: encoder, label: "Encoder 1", cc: 10 }
-      - { id: fader-1, kind: fader,   label: "Fader 1",   cc: 1 }
-      - { id: pad-1,   kind: pad,     label: "Pad 1",     note: 36, hasLED: true }
+      - { id: enc-1, kind: encoder, label: "Encoder 1", cc: 10 }
+      - { id: fader-1, kind: fader, label: "Fader 1", cc: 1 }
+      - { id: pad-1, kind: pad, label: "Pad 1", note: 36, hasLED: true }
 
 # --- Sources (where events come from) ------------------------------------------
 sources:
-  - id: wing                          # instance id, [a-z0-9-]
+  - id: wing # instance id, [a-z0-9-]
     type: midi
-    profile: apc-mini-mk2             # built-in or custom profile id
+    profile: apc-mini-mk2 # built-in or custom profile id
     options:
-      device: APC mini mk2            # case-insensitive substring of the OS port
-                                      # name. `show-mapper midi list` shows names.
-                                      # Omit to use the profile's default match.
+      device:
+        APC mini mk2 # case-insensitive substring of the OS port
+        # name. `show-mapper midi list` shows names.
+        # Omit to use the profile's default match.
 
 # --- Targets (where actions go) -------------------------------------------------
 targets:
   - id: ma3
     type: osc
     options:
-      host: 192.168.1.100             # grandMA3 console or onPC — CHANGE ME
-      port: 8000                      # must match the MA3 OSC row's Port
-                                      # (Menu > In & Out > OSC). MA3 uses one
-                                      # port for both send and receive per row.
-      prefix: ""                      # optional; matches the row's Prefix.
-                                      # GrandMA3-side setup: internal/helpers/gma3/README.md
+      host: 192.168.1.100 # grandMA3 console or onPC — CHANGE ME
+      port:
+        8000 # must match the MA3 OSC row's Port
+        # (Menu > In & Out > OSC). MA3 uses one
+        # port for both send and receive per row.
+      prefix:
+        "" # optional; matches the row's Prefix.
+        # GrandMA3-side setup: internal/helpers/gma3/README.md
 
 # --- Bindings (control -> action) ------------------------------------------------
 bindings:
   # 1) Toggle an executor key. Pad LED follows the toggle state.
   - id: key-201
     source: wing
-    control: pad-0-0                  # row 0 = bottom row (Akai numbering)
-    trigger: pressed                  # pressed | released | hold | value
-    mode: toggle                      # momentary (default) | toggle
+    control: pad-0-0 # row 0 = bottom row (Akai numbering)
+    trigger: pressed # pressed | released | hold | value
+    mode: toggle # momentary (default) | toggle
     target: ma3
     action:
-      type: value                     # value: sends pressValue/releaseValue
-      address: /Page1/Key201          # executor keys: 0 = released, >0 = pressed
+      type: value # value: sends pressValue/releaseValue
+      address: /Page1/Key201 # executor keys: 0 = released, >0 = pressed
       pressValue: 1
       releaseValue: 0
-      valueType: int                  # int | float (MA3 faders/keys expect int)
-    led: { color: green, mode: on }   # optional: board LED for the "on" state
+      valueType: int # int | float (MA3 faders/keys expect int)
+    led: { color: green, mode: on } # optional: board LED for the "on" state
 
   # 2) Run a grandMA3 keyword command on press (needs "Receive Command" in MA3's
   #    OSC row). Docs: internal/helpers/gma3/README.md
@@ -107,10 +110,10 @@ bindings:
   - id: fader-201
     source: wing
     control: fader-1
-    trigger: value                    # fires on analog movement
+    trigger: value # fires on analog movement
     target: ma3
     action:
-      type: fader                     # scales the control's 0..1 into `range`
+      type: fader # scales the control's 0..1 into `range`
       address: /Page1/Fader201
       range: [0, 100]
       valueType: int

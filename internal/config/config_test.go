@@ -12,7 +12,7 @@ func TestParseDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if cfg.HTTP.Listen != "127.0.0.1:8080" {
+	if cfg.HTTP.Listen != "127.0.0.1:8484" {
 		t.Errorf("default listen not applied: %q", cfg.HTTP.Listen)
 	}
 	if got := cfg.Bindings[0].Mode; got != ModeMomentary {
@@ -85,7 +85,7 @@ func TestAutoCreate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadPath(created): %v", err)
 	}
-	if back.Get().HTTP.Listen != "127.0.0.1:8080" {
+	if back.Get().HTTP.Listen != "127.0.0.1:8484" {
 		t.Errorf("defaults lost: %+v", back.Get().HTTP)
 	}
 

@@ -31,7 +31,7 @@ compiled in; nothing device- or console-specific lives at the top level.
    extract it anywhere — no installer.
 2. Run it (`show-mapper.exe` / `./show-mapper`). On first start a minimal
    `show-mapper.yaml` is generated automatically next to it.
-3. Open the printed URL (default <http://127.0.0.1:8080>); everything else is
+3. Open the printed URL (default <http://127.0.0.1:8484>); everything else is
    done in the web UI. Hand edits of the YAML hot-reload without a restart.
 4. **Mappings** page: wire button presses/holds/releases/faders to actions.
    The Dashboard shows a live event ticker - great for discovering controls.
@@ -58,7 +58,7 @@ make build-nocgo  # fast path: binary without MIDI hardware support
 make build        # full binary with MIDI (needs gcc/clang; see docs/releasing.md)
 
 # dev loop with hot-reload UI:
-make run          # terminal 1: backend :8080 (CGO auto-enabled when a C compiler is found;else the MIDI stub + virtual Surface)
+make run          # terminal 1: backend :8484 (CGO auto-enabled when a C compiler is found;else the MIDI stub + virtual Surface)
 make web-dev      # terminal 2: vite dev server on :5173 (proxy /api,/ws)
 
 make check        # vet + unit tests + svelte-check + builds (same as CI)

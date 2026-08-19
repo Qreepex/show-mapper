@@ -32,7 +32,7 @@ build-nocgo:
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/show-mapper
 	@echo "built $(BIN) ($(VERSION), no MIDI)"
 
-## run: run backend (serves API+UI on :8080). Uses CGO (real MIDI) when the
+## run: run backend (serves API+UI on :8484). Uses CGO (real MIDI) when the
 ## full native toolchain is available (Linux additionally needs ALSA headers),
 ## otherwise falls back to the stub + virtual Surface for development.
 run:
@@ -45,7 +45,7 @@ run:
 		if [ "$$(uname -s)" = "Linux" ]; then \
 			echo "  (Linux: sudo apt-get install -y build-essential libasound2-dev pkg-config)"; \
 		fi; \
-		echo "  → use the built-in virtual surface meanwhile: http://127.0.0.1:8080/surface"; \
+		echo "  → use the built-in virtual surface meanwhile: http://127.0.0.1:8484/surface"; \
 		CGO_ENABLED=0 go run ./cmd/show-mapper serve; \
 	fi
 
@@ -53,13 +53,13 @@ run:
 web:
 	cd web && npm ci && npm run build
 
-## web-dev: vite dev server on :5173 with /api+/ws proxy → backend on :8080
+## web-dev: vite dev server on :5173 with /api+/ws proxy → backend on :8484
 web-dev:
 	cd web && npm ci && npm run dev
 
 ## dev: print the two-terminal dev loop
 dev:
-	@echo "terminal 1:  make run        (backend :8080)"
+	@echo "terminal 1:  make run        (backend :8484)"
 	@echo "terminal 2:  make web-dev    (UI :5173, hot reload)"
 
 test:

@@ -80,7 +80,7 @@ Usage:
 
 serve flags:
   -config <path>   use a specific config file
-  -listen <addr>   override http.listen for this run (e.g. 0.0.0.0:8080)
+  -listen <addr>   override http.listen for this run (e.g. 0.0.0.0:8484)
 
 Docs: see docs/ (start with docs/architecture.md).
 `, version.Version)
@@ -93,7 +93,7 @@ Docs: see docs/ (start with docs/architecture.md).
 func cmdServe(args []string) int {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
 	cfgPath := fs.String("config", "", "path to config file (default: search order, see docs)")
-	listen := fs.String("listen", "", "override http.listen (e.g. 0.0.0.0:8080)")
+	listen := fs.String("listen", "", "override http.listen (e.g. 0.0.0.0:8484)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -111,7 +111,7 @@ func cmdServe(args []string) int {
 		if errors.Is(err, config.ErrNotFound) {
 			p := config.PreferredCreatePath()
 			slog.Info("no config found — generating starter config", "path", p)
-			slog.Info("open the web UI (default http://127.0.0.1:8080) to finish setup")
+			slog.Info("open the web UI (default http://127.0.0.1:8484) to finish setup")
 			cfgFile, err = config.CreateDefault(p)
 		}
 	}
@@ -198,7 +198,7 @@ func cmdConfig(args []string) int {
 		fmt.Fprintf(os.Stderr, "writing %s: %v\n", path, err)
 		return 1
 	}
-	fmt.Printf("wrote %s\n\nNext steps:\n  1. edit %s (set your grandMA3 IP, pick your board)\n  2. show-mapper serve\n  3. open the web UI shown in the log (default http://127.0.0.1:8080)\n", path, path)
+	fmt.Printf("wrote %s\n\nNext steps:\n  1. edit %s (set your grandMA3 IP, pick your board)\n  2. show-mapper serve\n  3. open the web UI shown in the log (default http://127.0.0.1:8484)\n", path, path)
 	return 0
 }
 

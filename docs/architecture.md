@@ -126,7 +126,7 @@ via the UI; saving through the UI validates, persists atomically (tmp+rename,
 
 Sections (full annotated version: [../show-mapper.example.yaml](../show-mapper.example.yaml)):
 
-- `http.listen` - UI/API bind (default `127.0.0.1:8080`, **no auth yet**).
+- `http.listen` - UI/API bind (default `127.0.0.1:8484`, **no auth yet**).
 - `profiles[]` - **user-defined device profiles** ("custom boards"). Built-ins
   ship in code; this is where users describe any other hardware. Each entry
   has a connector `type` (`midi`, later `streamdeck`) + match patterns +
@@ -221,7 +221,7 @@ inside the module dir (example: `internal/helpers/gma3/README.md`).
   vs broadcast/multicast, priority (sACN), rate limiting — same instance
   pattern as OSC.
 - **Firewall cheat sheet:** OSC commonly UDP 8000/9000, Art-Net UDP 6454,
-  sACN UDP 5568, show-mapper UI TCP 8080.
+  sACN UDP 5568, show-mapper UI TCP 8484.
 
 ### 5.5 MIDI specifics
 
@@ -251,7 +251,7 @@ config/UI - the same runtime `Profile` object is built from both sources.
   `/mappings` (bindings editor incl. action presets + control picker from
   profile metadata with free-text raw `note:N`/`cc:N` escapes), `/settings`
   (HTTP, sources, targets, custom board editor, config import/export).
-- Dev loop: `vite dev` on :5173 proxies `/api` + `/ws` → :8080 - no CORS,
+- Dev loop: `vite dev` on :5173 proxies `/api` + `/ws` → :8484 - no CORS,
   no origin juggling.
 
 ---

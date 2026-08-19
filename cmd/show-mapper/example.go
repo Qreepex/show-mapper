@@ -10,7 +10,7 @@ version: 1
 
 http:
   # Web UI + API + WebSocket. No auth yet — keep on localhost or a trusted show network.
-  listen: 127.0.0.1:8080
+  listen: 127.0.0.1:8484
 
 # --- Sources: where events come from ----------------------------------------
 sources:

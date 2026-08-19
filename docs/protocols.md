@@ -1,6 +1,6 @@
 # API & realtime protocol
 
-Base URL: same as the UI (default `http://127.0.0.1:8080`). Everything is JSON.
+Base URL: same as the UI (default `http://127.0.0.1:8484`). Everything is JSON.
 The web UI in `web/` uses exactly these endpoints - treat this file as the
 contract; change code + types (`web/src/lib/types.ts`) + this doc together.
 
@@ -77,12 +77,12 @@ freshness via `git diff --exit-code`).
 ## Worked example
 
 ```bash
-curl http://127.0.0.1:8080/api/config > cfg.json
+curl http://127.0.0.1:8484/api/config > cfg.json
 jq '.bindings += [{source:"wing", control:"pad-0-0", trigger:"pressed",
   target:"ma3", action:{type:"command", address:"/cmd", command:"Go Executor 1.201"}}]' \
   cfg.json > cfg2.json
 curl -X PUT -H 'Content-Type: application/json' --data @cfg2.json \
-  http://127.0.0.1:8080/api/config   # → {"ok":true} - live-reloaded
+  http://127.0.0.1:8484/api/config   # → {"ok":true} - live-reloaded
 # watch:
-wscat -c ws://127.0.0.1:8080/ws
+wscat -c ws://127.0.0.1:8484/ws
 ```

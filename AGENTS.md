@@ -16,9 +16,9 @@ via `PUT /api/config`.
 | --- | --- | --- |
 | Build (full, MIDI) | `make build` | needs C/C++ toolchain (RtMidi is C++) |
 | Build (fast, no MIDI) | `make build-nocgo` | `CGO_ENABLED=0`, works everywhere |
-| Run backend | `make run` | serves :8080; placeholder UI until `make web` |
+| Run backend | `make run` | serves :8484; placeholder UI until `make web` |
 | Frontend build | `make web` | outputs into `internal/server/dist/` (embedded) |
-| Frontend dev | `make web-dev` + `make run` | vite on :5173 proxied to :8080 |
+| Frontend dev | `make web-dev` + `make run` | vite on :5173 proxied to :8484 |
 | Tests + vet | `make test` / `make vet` | always `CGO_ENABLED=0` for tests |
 | Full local CI | `make check` | vet, tests, svelte-check, builds |
 | Lint | `make lint` | golangci-lint (config: `.golangci.yml`) |

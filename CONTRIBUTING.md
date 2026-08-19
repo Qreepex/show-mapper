@@ -15,7 +15,7 @@ make web && make build-nocgo   # UI + binary w/o MIDI
 make check                     # must be green before PRs
 ```
 
-Dev loop: `make run` (API :8080) + `make web-dev` (UI :5173, hot reload).
+Dev loop: `make run` (API :8484) + `make web-dev` (UI :5173, hot reload).
 
 ## Ground rules
 
