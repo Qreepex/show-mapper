@@ -146,3 +146,7 @@ Update `docs/protocols.md` + the Go structs + `make types` in the same PR.
   tab and flows the real pipeline. For real hardware access during dev:
   install MinGW-w64 (`choco install mingw` on Windows, gcc on Linux,
   Xcode CLT on macOS) — `make run` then auto-switches to CGO builds.
+- **WSL2**: loopback-bound servers are relayed to Windows localhost via a
+  relay that breaks occasionally; the server prints a hint when it detects
+  this combo (bind detection via /proc/version). Workaround:
+  `-listen 0.0.0.0:<port>` from WSL + `http://$(hostname -I | cut -d' ' -f1):<port>`.

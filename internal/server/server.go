@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -73,6 +74,9 @@ func (s *Server) Run(ctx context.Context) error {
 	errCh := make(chan error, 1)
 	go func() {
 		slog.Info("web UI listening", "addr", "http://"+s.http.Addr)
+		if hint := wslLocalhostHint(s.http.Addr); hint != "" {
+			slog.Info(hint)
+		}
 		errCh <- s.http.ListenAndServe()
 	}()
 	select {
@@ -495,6 +499,31 @@ func writeError(w http.ResponseWriter, status int, err error) {
 	// errors.Join output is newline-separated; surface as list for the UI.
 	parts := strings.Split(err.Error(), "\n")
 	writeJSON(w, status, map[string]any{"ok": false, "errors": parts})
+}
+
+// ---------------------------------------------------------------------------
+// WSL convenience: WSL2's localhost relay dies occasionally (hibernation,
+// VPNs, Hyper-V wedging). Detect it and print how to reach the UI anyway.
+// ---------------------------------------------------------------------------
+
+func isWSL() bool {
+	data, err := os.ReadFile("/proc/version")
+	return err == nil && strings.Contains(strings.ToLower(string(data)), "microsoft")
+}
+
+// wslLocalhostHint returns a non-empty log hint when running in WSL bound to loopback.
+func wslLocalhostHint(addr string) string {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil || !isWSL() {
+		return ""
+	}
+	if host != "127.0.0.1" && host != "localhost" && host != "::1" {
+		return ""
+	}
+	return "WSL detected: if http://localhost:" + port + " is unreachable from Windows, " +
+		"run `wsl --shutdown` in Windows first (broken relay), or restart with " +
+		"-listen 0.0.0.0:" + port + " and open http://<wsl-ip>:" + port +
+		" (find it via `ip -4 addr show eth0`)"
 }
 
 func containsStr(list []string, s string) bool {

@@ -33,6 +33,12 @@ compiled in; nothing device- or console-specific lives at the top level.
    `show-mapper.yaml` is generated automatically next to it.
 3. Open the printed URL (default <http://127.0.0.1:8484>); everything else is
    done in the web UI. Hand edits of the YAML hot-reload without a restart.
+
+**WSL2 note:** the UI normally gets relayed to Windows localhost automatically.
+If `http://localhost:8484` won't open from Windows: run `wsl --shutdown` in
+Windows (fixes a wedged relay), or start with `show-mapper serve -listen
+0.0.0.0:8484` inside WSL and open `http://$(hostname -I | cut -d' ' -f1):8484`
+from Windows.
 4. **Mappings** page: wire button presses/holds/releases/faders to actions.
    The Dashboard shows a live event ticker - great for discovering controls.
 
