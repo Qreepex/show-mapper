@@ -148,7 +148,7 @@ jobs:
           cd pkgs
           sha256sum show-mapper_* | tee checksums.txt
           ls -la
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: pkgs/*
           generate_release_notes: true
