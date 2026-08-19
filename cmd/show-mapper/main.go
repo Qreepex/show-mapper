@@ -13,6 +13,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -100,12 +101,21 @@ func cmdServe(args []string) int {
 	var err error
 	if *cfgPath != "" {
 		cfgFile, err = config.LoadPath(*cfgPath)
+		if err != nil && os.IsNotExist(err) {
+			slog.Info("creating starter config at requested path", "path", *cfgPath)
+			cfgFile, err = config.CreateDefault(*cfgPath)
+		}
 	} else {
 		cfgFile, err = config.Load()
+		if errors.Is(err, config.ErrNotFound) {
+			p := config.PreferredCreatePath()
+			slog.Info("no config found — generating starter config", "path", p)
+			slog.Info("open the web UI (default http://127.0.0.1:8080) to finish setup")
+			cfgFile, err = config.CreateDefault(p)
+		}
 	}
 	if err != nil {
 		slog.Error("loading config", "err", err)
-		slog.Info("hint: run `show-mapper config init` to create a starter config")
 		return 2
 	}
 	cfg := cfgFile.Get()

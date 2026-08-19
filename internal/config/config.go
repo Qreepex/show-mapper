@@ -303,8 +303,11 @@ func (f *File) Set(c Config) {
 	f.mu.Unlock()
 }
 
-// Load finds and parses the config file. If none exists it returns an error
-// (main offers `show-mapper config init` to create one).
+// ErrNotFound marks "no config file anywhere" (trigger for auto-creation).
+var ErrNotFound = errors.New("no config file found")
+
+// Load finds and parses the config file. Returns ErrNotFound (wrapped) when
+// no candidate exists; parse failures are regular errors.
 func Load() (*File, error) {
 	for _, p := range Candidates() {
 		data, err := os.ReadFile(p)
@@ -317,8 +320,7 @@ func Load() (*File, error) {
 		}
 		return &File{cfg: cfg, Path: p}, nil
 	}
-	return nil, fmt.Errorf("no config file found (looked in: %s) — run `show-mapper config init`",
-		strings.Join(Candidates(), ", "))
+	return nil, fmt.Errorf("%w (looked in: %s)", ErrNotFound, strings.Join(Candidates(), ", "))
 }
 
 // LoadPath parses a specific config file (used by the -config flag).
@@ -332,6 +334,66 @@ func LoadPath(path string) (*File, error) {
 		return nil, fmt.Errorf("parsing %s: %w", path, err)
 	}
 	return &File{cfg: cfg, Path: path}, nil
+}
+
+// starterHeader is prepended to auto-generated starter configs.
+const starterHeader = `# show-mapper configuration — generated automatically on first start.
+# Open the web UI (printed at startup, default http://127.0.0.1:8080) to add
+# boards / targets / mappings. Hand edits of this file are hot-reloaded.
+# Full annotated example: show-mapper.example.yaml
+
+`
+
+// PreferredCreatePath picks where to auto-create a starter config:
+// $SHOWMAPPER_CONFIG, else ./show-mapper.yaml if the working dir is writable,
+// else the binary's directory, else the OS user-config dir.
+func PreferredCreatePath() string {
+	if env := os.Getenv("SHOWMAPPER_CONFIG"); env != "" {
+		return env
+	}
+	if wd, err := os.Getwd(); err == nil && dirWritable(wd) {
+		return filepath.Join(wd, "show-mapper.yaml")
+	}
+	if exe, err := os.Executable(); err == nil {
+		if real, err := filepath.EvalSymlinks(exe); err == nil {
+			exe = real
+		}
+		if dir := filepath.Dir(exe); dirWritable(dir) {
+			return filepath.Join(dir, "show-mapper.yaml")
+		}
+	}
+	if dir, err := os.UserConfigDir(); err == nil {
+		return filepath.Join(dir, "show-mapper", "config.yaml")
+	}
+	return "show-mapper.yaml"
+}
+
+// CreateDefault writes a minimal starter config (version + http defaults —
+// zero connectors, ready to be filled via the UI) to path and returns it.
+func CreateDefault(path string) (*File, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return nil, err
+	}
+	cfg := Default()
+	data, err := MarshalYAML(&cfg)
+	if err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile(path, append([]byte(starterHeader), data...), 0o600); err != nil {
+		return nil, err
+	}
+	return &File{cfg: cfg, Path: path}, nil
+}
+
+func dirWritable(dir string) bool {
+	f, err := os.CreateTemp(dir, ".show-mapper-probe-*")
+	if err != nil {
+		return false
+	}
+	name := f.Name()
+	_ = f.Close()
+	_ = os.Remove(name)
+	return true
 }
 
 // Normalize applies defaults and validates a config that was NOT decoded

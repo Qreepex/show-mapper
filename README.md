@@ -27,10 +27,12 @@ compiled in; nothing device- or console-specific lives at the top level.
 
 1. Grab a release for your OS
    (`show-mapper_<ver>_windows_amd64.zip`, `_linux_amd64.tar.gz`,
-   `_darwin_arm64.tar.gz`, `_darwin_amd64.tar.gz`).
-2. Run `show-mapper config init`, edit `show-mapper.yaml` (set your console IP).
-3. Run `show-mapper.exe` / `./show-mapper` → open the printed URL
-   (default <http://127.0.0.1:8080>).
+   `_linux_arm64.tar.gz`, `_darwin_arm64.tar.gz`, `_darwin_amd64.tar.gz`) and
+   extract it anywhere — no installer.
+2. Run it (`show-mapper.exe` / `./show-mapper`). On first start a minimal
+   `show-mapper.yaml` is generated automatically next to it.
+3. Open the printed URL (default <http://127.0.0.1:8080>); everything else is
+   done in the web UI. Hand edits of the YAML hot-reload without a restart.
 4. **Mappings** page: wire button presses/holds/releases/faders to actions.
    The Dashboard shows a live event ticker - great for discovering controls.
 

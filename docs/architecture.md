@@ -117,9 +117,12 @@ CGO) → marked error, no retry (`core.PermanentError`).
 One YAML file (`show-mapper.yaml`; probe order: `$SHOWMAPPER_CONFIG` →
 `./show-mapper.yaml` (working dir) → `show-mapper.yaml` in the **binary's
 directory** (portable double-click runs) → `$UserConfigDir/show-mapper/config.yaml`;
-`-config` flag overrides). Edited by hand or via the UI; saving through the UI validates,
-persists atomically (tmp+rename, `.bak` kept), broadcasts `config.updated`,
-and hot-reloads all connectors.
+`-config` flag overrides). **If none exists, a minimal starter config
+(version + http defaults, zero connectors) is auto-created** — at
+`PreferredCreatePath()` (first writable of env var → CWD → exe dir →
+user-config dir), so first runs go straight to the web UI. Edited by hand or
+via the UI; saving through the UI validates, persists atomically (tmp+rename,
+`.bak` kept), broadcasts `config.updated`, and hot-reloads all connectors.
 
 Sections (full annotated version: [../show-mapper.example.yaml](../show-mapper.example.yaml)):
 

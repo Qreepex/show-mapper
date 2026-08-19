@@ -1,6 +1,8 @@
 package config
 
 import (
+	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -66,6 +68,40 @@ func TestValidateCustomProfile(t *testing.T) {
 	badBoth := strings.Replace(good, "note: 36", "note: 36\n        cc: 5", 1)
 	if _, err := Parse([]byte(badBoth)); err == nil {
 		t.Fatal("expected error when both note+cc set")
+	}
+}
+
+func TestAutoCreate(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "sub", "show-mapper.yaml")
+	f, err := CreateDefault(p)
+	if err != nil {
+		t.Fatalf("CreateDefault: %v", err)
+	}
+	if f.Path != p || f.Get().HTTP.Listen == "" {
+		t.Fatalf("bad File: %+v", f)
+	}
+	back, err := LoadPath(p)
+	if err != nil {
+		t.Fatalf("LoadPath(created): %v", err)
+	}
+	if back.Get().HTTP.Listen != "127.0.0.1:8080" {
+		t.Errorf("defaults lost: %+v", back.Get().HTTP)
+	}
+
+	// Setenv drives the SHOWMAPPER_CONFIG branch of PreferredCreatePath
+	t.Setenv("SHOWMAPPER_CONFIG", p)
+	if got := PreferredCreatePath(); got != p {
+		t.Errorf("PreferredCreatePath = %q, want %q", got, p)
+	}
+}
+
+func TestLoadErrNotFound(t *testing.T) {
+	t.Chdir(t.TempDir())
+	t.Setenv("SHOWMAPPER_CONFIG", filepath.Join(t.TempDir(), "nope.yaml"))
+	_, err := Load()
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
 
