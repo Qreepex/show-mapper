@@ -21,6 +21,17 @@ Local builds: `make build` (CGO) / `make build-nocgo` (portable). Version info
 goes in via ldflags (`internal/version`): `-X …/version.Version=0.1.0
 -X …/version.Commit=<sha> -X …/version.Date=<rfc3339>`.
 
+### Building the Windows exe yourself
+
+| From | With MIDI (portable exe, static runtime link) | Without MIDI |
+|---|---|---|
+| **Windows** | `choco install mingw` → `make build-windows` (or `make build`) | `make build-nocgo` |
+| **WSL/Linux** | `sudo apt install g++-mingw-w64` → `make build-windows` | `GOOS=windows make build-nocgo` |
+| one-liner (WSL) | `CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ go build -trimpath -ldflags "-s -w -extldflags=-static" -o bin/show-mapper.exe ./cmd/show-mapper` | `CGO_ENABLED=0 GOOS=windows go build -o bin/show-mapper-nomidi.exe ./cmd/show-mapper` |
+
+The `-extldflags=-static` bit is what makes the exe run on machines without
+MinGW DLLs (`libstdc++-6.dll not found` error).
+
 ## Versioning & releases
 
 - **Semver** via git tags `vX.Y.Z` (pre-1.0: minor = features, patch = fixes).

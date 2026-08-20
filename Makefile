@@ -32,6 +32,24 @@ build-nocgo:
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/show-mapper
 	@echo "built $(BIN) ($(VERSION), no MIDI)"
 
+## build-windows: cross-build the Windows exe from Linux/WSL (mingw-w64) or
+## build natively on Windows with MinGW (both need a C toolchain for MIDI).
+## Static runtime link → exe runs without MinGW DLLs.
+build-windows:
+	mkdir -p bin
+	@if command -v x86_64-w64-mingw32-g++ >/dev/null 2>&1; then \
+		echo "cross-compiling Windows exe via mingw-w64"; \
+		CGO_ENABLED=1 GOOS=windows GOARCH=amd64 \
+		CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ \
+		go build -trimpath -ldflags "-s -w -extldflags=-static $(LDFLAGS)" -o bin/show-mapper.exe ./cmd/show-mapper; \
+	elif command -v g++ >/dev/null 2>&1; then \
+		echo "native MinGW build"; \
+		CGO_ENABLED=1 go build -trimpath -ldflags "-s -w -extldflags=-static $(LDFLAGS)" -o bin/show-mapper.exe ./cmd/show-mapper; \
+	else \
+		echo "need a C++ toolchain: apt install g++-mingw-w64 (WSL/Linux) or choco install mingw (Windows)"; exit 1; \
+	fi
+	@echo "built bin/show-mapper.exe"
+
 ## run: run backend (serves API+UI on :8484). Uses CGO (real MIDI) when the
 ## full native toolchain is available (Linux additionally needs ALSA headers),
 ## otherwise falls back to the stub + virtual Surface for development.
