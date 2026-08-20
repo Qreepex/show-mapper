@@ -27,7 +27,7 @@ func init() {
 		{"gma3.go", "grandMA3: Go+", "", "Go+"},
 		{"gma3.goback", "grandMA3: Go- (GoBack)", "", "Go-"},
 		{"gma3.pause", "grandMA3: Pause", "", "Pause"},
-		{"gma3.temp", "grandMA3: Temp", "", "Temp"},
+		// gma3.temp is registered explicitly below (needs On/Off like flash).
 		{"gma3.on", "grandMA3: On", "", "On"},
 		{"gma3.off", "grandMA3: Off", "", "Off"},
 	} {

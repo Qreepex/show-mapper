@@ -30,6 +30,8 @@ jobs:
         run: |
           go tool tygo generate
           git diff --exit-code -- web/src/lib/generated
+      - name: smoke — binary boots (catches init() panics e.g. duplicate registry)
+        run: go run ./cmd/show-mapper version
 
   lint:
     name: golangci-lint
