@@ -23,9 +23,10 @@ type Profile struct {
 	Match []string // case-insensitive substrings of the OS port name, for auto-detection
 
 	Controls []core.Control
-	Notes    map[uint8]string // note number -> control ID
-	CCs      map[uint8]string // cc number   -> control ID
-	NoteOf   map[string]uint8 // control ID  -> note number (for LED feedback)
+	Notes    map[uint8]string        // note number -> control ID
+	CCs      map[uint8]string        // cc number   -> control ID
+	NoteOf   map[string]uint8        // control ID  -> note number (for LED feedback)
+	byID     map[string]core.Control // control ID -> control (kind lookup)
 
 	// PitchBend, if non-empty, maps pitch-bend messages to this control ID
 	// (e.g. "joystick-x" on the MPK mini mk3).
@@ -121,20 +122,44 @@ func (p *Profile) addPad(note uint8) {
 		ID: id, Kind: core.ControlPad, Row: row, Col: col, HasLED: true,
 		Label: fmt.Sprintf("Pad %d/%d", row+1, col+1),
 	}
-	p.Controls = append(p.Controls, c)
+	p.addControl(c)
 	p.Notes[note] = id
 	p.NoteOf[id] = note
 }
 
 func (p *Profile) addButton(note uint8, id, label string, hasLED bool) {
 	c := core.Control{ID: id, Kind: core.ControlButton, Label: label, HasLED: hasLED}
-	p.Controls = append(p.Controls, c)
+	p.addControl(c)
 	p.Notes[note] = id
 	p.NoteOf[id] = note
 }
 
+// addControl appends the control and keeps the by-ID lookup in sync.
+func (p *Profile) addControl(c core.Control) {
+	p.Controls = append(p.Controls, c)
+	if p.byID == nil {
+		p.byID = map[string]core.Control{}
+	}
+	p.byID[c.ID] = c
+}
+
+// ControlByID returns the control (for kind lookup during decode).
+func (p *Profile) ControlByID(id string) (core.Control, bool) {
+	c, ok := p.byID[id]
+	return c, ok
+}
+
 func (p *Profile) addFader(cc uint8, id, label string) {
 	c := core.Control{ID: id, Kind: core.ControlFader, Label: label}
-	p.Controls = append(p.Controls, c)
+	p.addControl(c)
+	p.CCs[cc] = id
+}
+
+// addButtonCC registers a momentary control that arrives as CC (press=high /
+// release=0) — MPK mini mk3 pads work that way. The source threshold-decodes:
+// low→high = pressed, high→low = released.
+func (p *Profile) addButtonCC(cc uint8, id, label string, hasLED bool) {
+	c := core.Control{ID: id, Kind: core.ControlButton, Label: label, HasLED: hasLED}
+	p.addControl(c)
 	p.CCs[cc] = id
 }

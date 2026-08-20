@@ -62,6 +62,7 @@ type Source struct {
 	mu     sync.Mutex
 	st     core.Status
 	conn   Conn
+	ccEdge map[uint8]bool // pressed-state per CC for button-kind CC controls
 	closed bool
 }
 
@@ -190,9 +191,20 @@ func (s *Source) onRaw(data []byte) {
 		ctrl, ok := s.profile.CCs[cc]
 		if !ok {
 			ctrl = fmt.Sprintf("cc:%d", cc)
+			ev = core.Event{Kind: core.EventValue, Control: ctrl, Value: float64(val) / 127.0, Raw: val}
+			break
 		}
-		ev = core.Event{Kind: core.EventValue, Control: ctrl, Value: float64(val) / 127.0, Raw: val}
-	case 0xE0: // Pitch Bend (e.g. MPK/X-Touch joystick X axis)
+		// CC-backed pads/buttons (e.g. MPK mk3 pads on CC 32–39) are threshold-decoded.
+		edgeev, handled := s.ccButtonEvent(cc, ctrl, val)
+		if !handled {
+			ev = core.Event{Kind: core.EventValue, Control: ctrl, Value: float64(val) / 127.0, Raw: val}
+			break
+		}
+		if edgeev == nil {
+			return // no edge (repeat within same pressed/released state)
+		}
+		ev = *edgeev
+	case 0xE0: // Pitch Bend (e.g. joystick X axis on boards that use it)
 		ctrl := s.profile.PitchBend
 		if ctrl == "" {
 			ctrl = "pitchbend"
@@ -253,4 +265,34 @@ func (s *Source) SetControlFeedback(controlID string, fb core.ControlFeedback) e
 		}
 	}
 	return nil
+}
+
+// ccButtonEvent threshold-decodes CCs that map to pad/button controls
+// (press ≥ 64 / release < 64, edge-detected). Returns:
+//
+//	handled=false          → not a button-kind control; caller treats as analog
+//	ev=nil, handled=true   → button control but no edge (repeat); drop
+//	ev non-nil             → press/release edge event
+func (s *Source) ccButtonEvent(cc uint8, controlID string, val uint8) (*core.Event, bool) {
+	ctl, ok := s.profile.ControlByID(controlID)
+	if !ok || (ctl.Kind != core.ControlButton && ctl.Kind != core.ControlPad) {
+		return nil, false
+	}
+	pressed := val >= 64
+	s.mu.Lock()
+	if s.ccEdge == nil {
+		s.ccEdge = map[uint8]bool{}
+	}
+	prev := s.ccEdge[cc]
+	if pressed != prev {
+		s.ccEdge[cc] = pressed
+	}
+	s.mu.Unlock()
+	if pressed == prev {
+		return nil, true
+	}
+	if pressed {
+		return &core.Event{Kind: core.EventPressed, Control: controlID, Value: float64(val) / 127.0, Raw: val}, true
+	}
+	return &core.Event{Kind: core.EventReleased, Control: controlID, Value: 0, Raw: 0}, true
 }

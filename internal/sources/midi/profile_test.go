@@ -132,28 +132,58 @@ func TestMpkMiniMk3Mapping(t *testing.T) {
 	if !ok {
 		t.Fatal("mpk-mini-mk3 profile missing")
 	}
-	if got := p.Notes[36]; got != "pad-a-1" {
-		t.Errorf("note 36 → %q, want pad-a-1", got)
+	for cc, want := range map[uint8]string{32: "pad-a-1", 39: "pad-a-8"} {
+		ctrl, ok := p.CCs[cc]
+		if !ok || ctrl != want {
+			t.Errorf("cc %d → %q, want %q", cc, p.CCs[cc], want)
+		}
+		cctl, _ := p.ControlByID(ctrl)
+		if cctl.Kind != core.ControlButton {
+			t.Errorf("pad %q kind %q, want button (CC threshold decode)", ctrl, cctl.Kind)
+		}
 	}
-	if got := p.Notes[43]; got != "pad-a-8" {
-		t.Errorf("note 43 → %q, want pad-a-8", got)
+	if got := p.CCs[16]; got != "knob-1" {
+		t.Errorf("cc 16 → %q, want knob-1", got)
 	}
-	if got := p.Notes[44]; got != "pad-b-1" {
-		t.Errorf("note 44 → %q, want pad-b-1", got)
+	if got := p.CCs[23]; got != "knob-8" {
+		t.Errorf("cc 23 → %q, want knob-8", got)
 	}
-	if got := p.CCs[70]; got != "knob-1" {
-		t.Errorf("cc 70 → %q, want knob-1", got)
+	if got := p.CCs[80]; got != "joystick-x" {
+		t.Errorf("cc 80 → %q, want joystick-x", got)
 	}
-	if got := p.CCs[77]; got != "knob-8" {
-		t.Errorf("cc 77 → %q, want knob-8", got)
+	if got := p.CCs[81]; got != "joystick-y" {
+		t.Errorf("cc 81 → %q, want joystick-y", got)
 	}
-	if p.PitchBend != "joystick-x" {
-		t.Errorf("pitch bend control = %q, want joystick-x", p.PitchBend)
-	}
-	if got := p.CCs[1]; got != "joystick-y" {
-		t.Errorf("cc 1 → %q, want joystick-y", got)
+	if p.PitchBend != "" {
+		t.Errorf("pitch bend must be unmapped on the mpk, got %q", p.PitchBend)
 	}
 	if found := ProfileForDevice("MPK mini 3"); found == nil || found.ID != "mpk-mini-mk3" {
 		t.Errorf("device auto-detect → %v", found)
+	}
+}
+
+func TestCCButtonThreshold(t *testing.T) {
+	p, ok := ProfileByID("mpk-mini-mk3")
+	if !ok {
+		t.Fatal("profile missing")
+	}
+	src := &Source{profile: p, ccEdge: map[uint8]bool{}}
+
+	on1, handled := src.ccButtonEvent(32, "pad-a-1", 127)
+	if !handled || on1 == nil || on1.Kind != core.EventPressed {
+		t.Fatalf("press edge: %+v handled=%v", on1, handled)
+	}
+	repeat, _ := src.ccButtonEvent(32, "pad-a-1", 100)
+	if repeat != nil {
+		t.Fatal("repeat above threshold must be dropped")
+	}
+	off, _ := src.ccButtonEvent(32, "pad-a-1", 0)
+	if off == nil || off.Kind != core.EventReleased {
+		t.Fatalf("release edge: %+v", off)
+	}
+	// analog knob stays analog:
+	ev, handled := src.ccButtonEvent(16, "knob-1", 64)
+	if handled || ev != nil {
+		t.Fatal("knob CC must NOT be threshold-decoded")
 	}
 }
