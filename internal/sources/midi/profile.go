@@ -27,6 +27,10 @@ type Profile struct {
 	CCs      map[uint8]string // cc number   -> control ID
 	NoteOf   map[string]uint8 // control ID  -> note number (for LED feedback)
 
+	// PitchBend, if non-empty, maps pitch-bend messages to this control ID
+	// (e.g. "joystick-x" on the MPK mini mk3).
+	PitchBend string
+
 	// IntroSysex, if set, is sent right after connect (inner bytes only,
 	// without 0xF0/0xF7). The APC mini mk2 requires this "Introduction"
 	// handshake before device-specific traffic.
@@ -45,7 +49,7 @@ type ledBackend interface {
 // profiles holds all registered profiles. ORDER MATTERS for auto-detection:
 // "APC mini" is a substring of the "APC mini mk2" port name, so the mk2
 // profile must be matched first.
-var profiles = []*Profile{apcMiniMk2(), apcMini()}
+var profiles = []*Profile{apcMiniMk2(), apcMini(), mpkMiniMk3()}
 
 var profileIndex = func() map[string]*Profile {
 	m := map[string]*Profile{}

@@ -19,7 +19,22 @@ profiles ship for confirmed boards; anything else can be described as a
 
 ## Built-in profiles
 
-### `apc-mini-mk2` - verified against the official Akai protocol doc
+### `mpk-mini-mk3` — Akai MPK mini MK3 (default factory program)
+
+Sources: Akai FAQ + joonas.fi's reverse-engineering writeup. **`TODO(hardware)`:
+verify against your unit with `show-mapper midi monitor`.**
+
+- **Pads**: Bank A notes **36–43** → `pad-a-1..8`, Bank B notes **44–51** → `pad-b-1..8`
+  (channel 10 by default; bank switched with the hardware Bank A/B key).
+- **Knobs K1–K8** (endless pots, factory absolute mode): CC **70–77** → `knob-1..8`.
+- **Joystick**: X axis = **pitch bend** → `joystick-x`; Y = CC **1** → `joystick-y`.
+- **Keyboard** (25 keys, ch 1): intentionally unmapped — keys arrive as raw
+  `note:NN` events you can bind ad-hoc from the Dashboard ticker.
+- Octave/Arp/Bank keys are internal functions and do not emit MIDI.
+- Sustain pedal: CC 64 → shows as `cc:64`, bind with `trigger: value`.
+- Pad LEDs are not host-addressable per public info → no LED feedback.
+
+### `apc-mini-mk2` — verified against the official Akai protocol doc
 
 Source: "APC mini mk2 Communications Protocol v1.0" (Akai/inMusic PDF).
 

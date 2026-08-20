@@ -126,3 +126,34 @@ func assertMsgs(t *testing.T, a, b [][]byte) {
 		}
 	}
 }
+
+func TestMpkMiniMk3Mapping(t *testing.T) {
+	p, ok := ProfileByID("mpk-mini-mk3")
+	if !ok {
+		t.Fatal("mpk-mini-mk3 profile missing")
+	}
+	if got := p.Notes[36]; got != "pad-a-1" {
+		t.Errorf("note 36 → %q, want pad-a-1", got)
+	}
+	if got := p.Notes[43]; got != "pad-a-8" {
+		t.Errorf("note 43 → %q, want pad-a-8", got)
+	}
+	if got := p.Notes[44]; got != "pad-b-1" {
+		t.Errorf("note 44 → %q, want pad-b-1", got)
+	}
+	if got := p.CCs[70]; got != "knob-1" {
+		t.Errorf("cc 70 → %q, want knob-1", got)
+	}
+	if got := p.CCs[77]; got != "knob-8" {
+		t.Errorf("cc 77 → %q, want knob-8", got)
+	}
+	if p.PitchBend != "joystick-x" {
+		t.Errorf("pitch bend control = %q, want joystick-x", p.PitchBend)
+	}
+	if got := p.CCs[1]; got != "joystick-y" {
+		t.Errorf("cc 1 → %q, want joystick-y", got)
+	}
+	if found := ProfileForDevice("MPK mini 3"); found == nil || found.ID != "mpk-mini-mk3" {
+		t.Errorf("device auto-detect → %v", found)
+	}
+}

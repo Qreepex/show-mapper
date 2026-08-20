@@ -38,7 +38,7 @@ type Config struct {
 	Updates *UpdatesConfig `yaml:"updates,omitempty" json:"updates,omitempty"`
 
 	// Profiles holds USER-DEFINED device profiles ("custom boards").
-	// Built-in profiles (e.g. MIDI profile apc-mini-mk2) ship with the binary;
+	// Built-in profiles (e.g. MIDI profiles apc-mini-mk2, apc-mini, mpk-mini-mk3) ship with the binary;
 	// this section lets users describe any other hardware — see
 	// docs/midi-devices.md#custom-boards and the UI Boards section.
 	Profiles []ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`

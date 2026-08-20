@@ -192,6 +192,13 @@ func (s *Source) onRaw(data []byte) {
 			ctrl = fmt.Sprintf("cc:%d", cc)
 		}
 		ev = core.Event{Kind: core.EventValue, Control: ctrl, Value: float64(val) / 127.0, Raw: val}
+	case 0xE0: // Pitch Bend (e.g. MPK/X-Touch joystick X axis)
+		ctrl := s.profile.PitchBend
+		if ctrl == "" {
+			ctrl = "pitchbend"
+		}
+		v14 := int(data[2])<<7 | int(data[1])
+		ev = core.Event{Kind: core.EventValue, Control: ctrl, Value: float64(v14) / 16383.0, Raw: data[2]}
 	default:
 		return
 	}

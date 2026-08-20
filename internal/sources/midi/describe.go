@@ -27,6 +27,11 @@ func Describe(data []byte) string {
 		if len(data) >= 3 {
 			return fmt.Sprintf("ControlChange ch=%2d cc=%3d   val=%3d  (raw % X)", ch, data[1], data[2], data)
 		}
+	case 0xE0:
+		if len(data) >= 3 {
+			v14 := int(data[2])<<7 | int(data[1])
+			return fmt.Sprintf("PitchBend    ch=%2d value=%5d  (raw % X)", ch, v14, data)
+		}
 	case 0xF0:
 		return fmt.Sprintf("SysEx        len=%d  (raw % X)", len(data), data)
 	}
