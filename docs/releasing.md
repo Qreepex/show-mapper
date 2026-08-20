@@ -25,7 +25,7 @@ goes in via ldflags (`internal/version`): `-X …/version.Version=0.1.0
 
 | From | With MIDI (portable exe, static runtime link) | Without MIDI |
 |---|---|---|
-| **Windows** | `winget install -e --id BrechtSanders.WinLibs.POSIX.UCRT` (or `choco install mingw`) → `make build-windows` (or `make build`) | `make build-nocgo` |
+| **Windows** | `winget install -e --id BrechtSanders.WinLibs.POSIX.UCRT` (or `choco install mingw`) → `make build-windows` or no make: `powershell -File scripts\dev.ps1 build` | `powershell -File scripts\dev.ps1 build-nocgo` |
 | **WSL/Linux** | `sudo apt install g++-mingw-w64` → `make build-windows` | `GOOS=windows make build-nocgo` |
 | one-liner (WSL) | `CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ go build -trimpath -ldflags "-s -w -extldflags=-static" -o bin/show-mapper.exe ./cmd/show-mapper` | `CGO_ENABLED=0 GOOS=windows go build -o bin/show-mapper-nomidi.exe ./cmd/show-mapper` |
 

@@ -72,6 +72,10 @@ make web-dev      # terminal 2: vite dev server on :5173 (proxy /api,/ws)
 make check        # vet + unit tests + svelte-check + builds (same as CI)
 ```
 
+**Native Windows (no make):** use the PowerShell twin instead —
+`powershell -ExecutionPolicy Bypass -File scripts\dev.ps1 <task>`
+(tasks: `build`, `build-nocgo`, `web`, `run`, `test`, `check`, `midi-list`).
+
 **No MIDI board or no C++ toolchain?** Add a source of type `sim` (Sources tab),
 open the **Surface** tab and click/drag through the whole event → binding → OSC
 pipeline in the browser.
