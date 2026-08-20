@@ -144,6 +144,15 @@ func (c *Conductor) rebuildLocked() {
 // the conductor is shut down.
 func (c *Conductor) runSourceInstance(id string, src Source) {
 	defer c.wg.Done()
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("source goroutine panicked (instance dropped)", "id", id, "panic", r)
+			c.sink.Broadcast("connector.status", ConnectorStatus{
+				ID: id, Kind: "source", Type: src.Type(),
+				Status: Status{State: StateError, Detail: fmt.Sprintf("panic: %v", r)},
+			})
+		}
+	}()
 	log := slog.With("source", id)
 
 	setStatus := func(st Status) {
@@ -190,6 +199,15 @@ func (c *Conductor) runSourceInstance(id string, src Source) {
 
 func (c *Conductor) runTargetInstance(id string, tgt Target) {
 	defer c.wg.Done()
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("target goroutine panicked (instance dropped)", "id", id, "panic", r)
+			c.sink.Broadcast("connector.status", ConnectorStatus{
+				ID: id, Kind: "target", Type: tgt.Type(),
+				Status: Status{State: StateError, Detail: fmt.Sprintf("panic: %v", r)},
+			})
+		}
+	}()
 	log := slog.With("target", id)
 
 	c.sink.Broadcast("connector.status", ConnectorStatus{
@@ -292,7 +310,9 @@ func (c *Conductor) handleEvent(ev Event, src Source) {
 		case b.Trigger == config.TriggerPressed && ev.Kind == EventPressed:
 			c.dispatchPress(b, src)
 
-		case b.Trigger == config.TriggerReleased && ev.Kind == EventReleased:
+		// release edge: pairs with `trigger: pressed` (momentary = press+release)
+		// as well as standalone `trigger: released` bindings.
+		case ev.Kind == EventReleased && (b.Trigger == config.TriggerPressed || b.Trigger == config.TriggerReleased):
 			c.dispatchRelease(b)
 
 		case b.Trigger == config.TriggerHold && ev.Kind == EventPressed:
@@ -332,8 +352,8 @@ func (c *Conductor) dispatchPress(b config.Binding, src Source) {
 }
 
 func (c *Conductor) dispatchRelease(b config.Binding) {
-	if b.Mode != config.ModeMomentary {
-		return // toggle: release does nothing
+	if b.Mode == config.ModeToggle {
+		return // toggle: release edges don't re-send
 	}
 	act, ok := releaseAction(b)
 	if !ok || act.Address == "" {

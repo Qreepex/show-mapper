@@ -43,7 +43,10 @@ func pressAction(b config.Binding) (Action, bool) {
 	return Action{}, false
 }
 
-// ReleaseAction resolves the payload for a "release" (or toggle-off in toggle mode).
+// ReleaseAction resolves the payload for a "release" (toggle-off / momentary
+// pair side / released-trigger edge). Falls back to the press payload when no
+// release-specific value is configured — so `trigger: released` bindings work
+// with only a press payload set.
 func releaseAction(b config.Binding) (Action, bool) {
 	if b.Action.Type == config.ActionTypePreset {
 		b2, err := resolvePreset(b)
@@ -56,16 +59,25 @@ func releaseAction(b config.Binding) (Action, bool) {
 	base := Action{BindingID: b.Key(), TargetID: b.Target, Kind: ActionKind(b.Action.Type), Address: b.Action.Address}
 	switch b.Action.Type {
 	case config.ActionCommand:
-		if b.Action.ReleaseCommand == "" {
-			return Action{}, false
+		if b.Action.ReleaseCommand != "" {
+			base.Args = []any{b.Action.ReleaseCommand}
+			return base, true
 		}
-		base.Args = []any{b.Action.ReleaseCommand}
-		return base, true
+		// release trigger without a release command: fall back to press command
+		if b.Action.Command != "" {
+			base.Args = []any{b.Action.Command}
+			return base, true
+		}
+		return Action{}, false
 	case config.ActionValue:
-		if b.Action.ReleaseValue == nil {
+		v := b.Action.ReleaseValue
+		if v == nil {
+			v = b.Action.PressValue // fallback for release-trigger bindings
+		}
+		if v == nil {
 			return Action{}, false
 		}
-		base.Args = []any{numericArg(*b.Action.ReleaseValue, b.Action.ValueType)}
+		base.Args = []any{numericArg(*v, b.Action.ValueType)}
 		return base, true
 	}
 	return Action{}, false

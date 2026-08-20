@@ -156,6 +156,10 @@ type Binding struct {
 	Source  string `yaml:"source" json:"source"`   // SourceConfig.ID
 	Control string `yaml:"control" json:"control"` // control ID, e.g. "pad-3-4"; see the source's profile
 	Trigger string `yaml:"trigger" json:"trigger"` // pressed | released | hold | value
+	// Semantics: pressed fires on button-down AND (momentary mode) delivers its
+	// release pair on button-up (releaseCommand/releaseValue or preset release).
+	// released = standalone "fire on release" (falls back to the press payload
+	// when no release-specific value is set).
 	// HoldMs is the press duration (milliseconds) after which a "hold" binding fires.
 	// Only used when Trigger == "hold". Default: 500.
 	HoldMs int `yaml:"holdMs,omitempty" json:"holdMs,omitempty"`

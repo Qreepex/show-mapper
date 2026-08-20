@@ -63,8 +63,9 @@ func TestValueActions(t *testing.T) {
 	if !ok || a.Args[0] != int32(1) {
 		t.Errorf("value pressAction: %+v ok=%v", a, ok)
 	}
-	if _, ok = releaseAction(val); ok {
-		t.Error("releaseAction should be !ok without releaseValue")
+	a, ok = releaseAction(val)
+	if !ok || a.Args[0] != int32(1) { // fallback: press value when ReleaseValue unset
+		t.Errorf("value releaseAction fallback: %+v ok=%v", a, ok)
 	}
 
 	fader := config.Binding{

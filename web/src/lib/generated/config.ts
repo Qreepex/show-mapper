@@ -30,7 +30,7 @@ export interface Config {
   updates?: UpdatesConfig;
   /**
    * Profiles holds USER-DEFINED device profiles ("custom boards").
-   * Built-in profiles (e.g. MIDI profile apc-mini-mk2) ship with the binary;
+   * Built-in profiles (e.g. MIDI profiles apc-mini-mk2, apc-mini, mpk-mini-mk3) ship with the binary;
    * this section lets users describe any other hardware — see
    * docs/midi-devices.md#custom-boards and the UI Boards section.
    */
@@ -166,6 +166,10 @@ export interface Binding {
   control: string; // control ID, e.g. "pad-3-4"; see the source's profile
   trigger: string; // pressed | released | hold | value
   /**
+   * Semantics: pressed fires on button-down AND (momentary mode) delivers its
+   * release pair on button-up (releaseCommand/releaseValue or preset release).
+   * released = standalone "fire on release" (falls back to the press payload
+   * when no release-specific value is set).
    * HoldMs is the press duration (milliseconds) after which a "hold" binding fires.
    * Only used when Trigger == "hold". Default: 500.
    */

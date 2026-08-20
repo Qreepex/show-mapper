@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	rtmidi "gitlab.com/gomidi/rtmididrv/imported/rtmidi"
 )
@@ -175,7 +176,12 @@ func (c *rtConn) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.in != nil {
+		// CancelCallback first, then give any in-flight callback a moment to
+		// drain before the native objects are closed/freed — the bundled RtMidi
+		// wrapper has no join for the driver thread, and closing while a
+		// callback runs can crash the process.
 		_ = c.in.CancelCallback()
+		time.Sleep(100 * time.Millisecond)
 		_ = c.in.Close()
 		c.in.Destroy()
 		c.in = nil

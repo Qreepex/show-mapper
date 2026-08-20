@@ -94,9 +94,12 @@ so board state can mirror console state.
 | Sink | `core.Sink` | broadcast abstraction → `server.Hub` → WebSocket |
 | Inspector | optional per-source-type func | enumerates hardware for the UI (`GET /api/sources/<type>/inspect`) |
 
-**Trigger semantics:** `pressed` fires on button-down; `released` on button-up
-(momentary only); `hold` fires after `holdMs` of continuous press (cancelled by
-early release); `value` fires on analog movement (fader/encoder).
+**Trigger semantics:** `pressed` fires on button-down — and with
+`mode: momentary` also delivers the configured release side on button-up
+(release command/value or a preset's release payload). `released` is a
+standalone release trigger (falls back to the press payload when no
+release-specific value is set). `hold` fires after `holdMs` of continuous
+press (cancelled by early release); `value` fires on analog movement.
 
 **Modes:** `momentary` (default: press → OnPress, release → OnRelease-if-set),
 `toggle` (press flips state; on → OnPress + LED, off → OnRelease + LED off).
