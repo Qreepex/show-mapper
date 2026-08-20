@@ -58,7 +58,7 @@ from Windows.
 # prerequisites: Go 1.24+, Node 22+; a C++ toolchain only for MIDI-enabled builds:
 #   Linux/WSL: sudo apt-get install -y build-essential libasound2-dev pkg-config
 #   macOS:     Xcode command line tools (xcode-select --install)
-#   Windows:   choco install mingw   (or MSYS2 ucrt64 gcc)
+#   Windows:   winget install -e --id BrechtSanders.WinLibs.POSIX.UCRT   (or: choco install mingw)
 git clone <repo> && cd show-mapper
 
 make web          # build the Svelte 5 UI (into internal/server/dist)

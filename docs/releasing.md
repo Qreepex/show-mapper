@@ -14,7 +14,7 @@ never needs a toolchain.
 | Target | Toolchain notes |
 | --- | --- |
 | linux/amd64 | `apt install build-essential libasound2-dev pkg-config` (RtMidi uses ALSA) |
-| windows/amd64 | MinGW g++ (`choco install mingw`; CI installs per job).**Release builds link `-extldflags=-static`** — no libstdc++/libgcc/winpthread DLLs needed on end-user machines. |
+| windows/amd64 | MinGW g++ (`winget install -e --id BrechtSanders.WinLibs.POSIX.UCRT` (or `choco install mingw`); CI installs per job).**Release builds link `-extldflags=-static`** — no libstdc++/libgcc/winpthread DLLs needed on end-user machines. |
 | darwin/amd64, darwin/arm64 | Xcode CLT (present on GH runners); links CoreMIDI/CoreAudio frameworks |
 
 Local builds: `make build` (CGO) / `make build-nocgo` (portable). Version info
@@ -25,7 +25,7 @@ goes in via ldflags (`internal/version`): `-X …/version.Version=0.1.0
 
 | From | With MIDI (portable exe, static runtime link) | Without MIDI |
 |---|---|---|
-| **Windows** | `choco install mingw` → `make build-windows` (or `make build`) | `make build-nocgo` |
+| **Windows** | `winget install -e --id BrechtSanders.WinLibs.POSIX.UCRT` (or `choco install mingw`) → `make build-windows` (or `make build`) | `make build-nocgo` |
 | **WSL/Linux** | `sudo apt install g++-mingw-w64` → `make build-windows` | `GOOS=windows make build-nocgo` |
 | one-liner (WSL) | `CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ go build -trimpath -ldflags "-s -w -extldflags=-static" -o bin/show-mapper.exe ./cmd/show-mapper` | `CGO_ENABLED=0 GOOS=windows go build -o bin/show-mapper-nomidi.exe ./cmd/show-mapper` |
 

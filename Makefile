@@ -46,7 +46,7 @@ build-windows:
 		echo "native MinGW build"; \
 		CGO_ENABLED=1 go build -trimpath -ldflags "-s -w -extldflags=-static $(LDFLAGS)" -o bin/show-mapper.exe ./cmd/show-mapper; \
 	else \
-		echo "need a C++ toolchain: apt install g++-mingw-w64 (WSL/Linux) or choco install mingw (Windows)"; exit 1; \
+		echo "need a C++ toolchain: apt install g++-mingw-w64 (WSL/Linux) or winget install -e --id BrechtSanders.WinLibs.POSIX.UCRT (Windows)"; exit 1; \
 	fi
 	@echo "built bin/show-mapper.exe"
 
