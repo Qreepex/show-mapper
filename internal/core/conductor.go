@@ -461,7 +461,11 @@ func (c *Conductor) shutdownInstancesLocked() {
 		t.Stop()
 		delete(c.holdTimers, key)
 	}
+	// Release the mutex while waiting: running goroutines in handleEvent/send
+	// may be blocked on c.mu.Lock() — holding it here would deadlock.
+	c.mu.Unlock()
 	c.wg.Wait()
+	c.mu.Lock()
 	for _, s := range c.sources {
 		_ = s.Close()
 	}
