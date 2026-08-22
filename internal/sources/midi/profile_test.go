@@ -131,14 +131,16 @@ func TestMpkMiniMk3Mapping(t *testing.T) {
 	if !ok {
 		t.Fatal("mpk-mini-mk3 profile missing")
 	}
-	for cc, want := range map[uint8]string{32: "pad-a-1", 39: "pad-a-8"} {
-		ctrl, ok := p.CCs[cc]
+	// Touch pads are notes (measured on hardware, factory program):
+	// bank A = 16–23, bank B = 32–39; press=127 / release=0.
+	for note, want := range map[uint8]string{16: "pad-a-1", 23: "pad-a-8", 32: "pad-b-1", 39: "pad-b-8"} {
+		ctrl, ok := p.Notes[note]
 		if !ok || ctrl != want {
-			t.Errorf("cc %d → %q, want %q", cc, p.CCs[cc], want)
+			t.Errorf("note %d → %q, want %q", note, p.Notes[note], want)
 		}
 		cctl, _ := p.ControlByID(ctrl)
 		if cctl.Kind != core.ControlButton {
-			t.Errorf("pad %q kind %q, want button (CC threshold decode)", ctrl, cctl.Kind)
+			t.Errorf("pad %q kind %q, want button", ctrl, cctl.Kind)
 		}
 	}
 	if got := p.CCs[16]; got != "knob-1" {

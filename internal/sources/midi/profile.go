@@ -136,10 +136,10 @@ func (p *Profile) addButton(note uint8, id, label string, hasLED bool) {
 
 // addControl appends the control and keeps the by-ID lookup in sync.
 // The Controls inventory is unique by control ID: one control may be
-// reachable through several message routes (e.g. MPK mini mk3 pads are
-// registered as both note- AND CC-triggered via addButton+addButtonCC),
-// but it must appear in Controls only once — the UI keys option lists by
-// control ID (Svelte each_key_duplicate otherwise).
+// reachable through several message routes (a profile may map both a note
+// and a CC to the same pad), but it must appear in Controls only once —
+// the UI keys option lists by control ID (Svelte each_key_duplicate
+// otherwise).
 func (p *Profile) addControl(c core.Control) {
 	if p.byID == nil {
 		p.byID = map[string]core.Control{}
@@ -159,15 +159,6 @@ func (p *Profile) ControlByID(id string) (core.Control, bool) {
 
 func (p *Profile) addFader(cc uint8, id, label string) {
 	c := core.Control{ID: id, Kind: core.ControlFader, Label: label}
-	p.addControl(c)
-	p.CCs[cc] = id
-}
-
-// addButtonCC registers a momentary control that arrives as CC (press=high /
-// release=0) — MPK mini mk3 pads work that way. The source threshold-decodes:
-// low→high = pressed, high→low = released.
-func (p *Profile) addButtonCC(cc uint8, id, label string, hasLED bool) {
-	c := core.Control{ID: id, Kind: core.ControlButton, Label: label, HasLED: hasLED}
 	p.addControl(c)
 	p.CCs[cc] = id
 }

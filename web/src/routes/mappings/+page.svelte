@@ -3,6 +3,7 @@
   import { api } from "$lib/api";
   import { ConfigDraft } from "$lib/draft.svelte";
   import type { ActionPreset, ActionType, Binding, Mode, Trigger } from "$lib/types";
+  import { LED_COLORS, LED_MODES } from "$lib/options";
   import Card from "$lib/ui/Card.svelte";
   import PageHeader from "$lib/ui/PageHeader.svelte";
   import Button from "$lib/ui/Button.svelte";
@@ -14,22 +15,25 @@
   import NumberInput from "$lib/ui/NumberInput.svelte";
   import SelectInput from "$lib/ui/SelectInput.svelte";
   import EmptyState from "$lib/ui/EmptyState.svelte";
+  import BulkAssign from "$lib/ui/BulkAssign.svelte";
 
   const d = new ConfigDraft();
   onMount(() => d.init());
 
-  function controlsFor(sourceId: string): { id: string; label: string }[] {
+  let showBulk = $state(false);
+
+  function controlsFor(sourceId: string): { id: string; label: string; kind: string }[] {
     if (!d.cfg || !d.meta) return [];
     const src = d.cfg.sources.find((s) => s.id === sourceId);
     if (!src) return [];
     const builtin = d.meta.sourceTypes
       .find((t) => t.type === src.type)
       ?.profiles?.find((p) => p.id === src.profile);
-    if (builtin) return builtin.controls.map((c) => ({ id: c.id, label: c.label }));
+    if (builtin) return builtin.controls.map((c) => ({ id: c.id, label: c.label, kind: c.kind }));
     const customs = (d.cfg.profiles ?? [])
       .filter((p) => p.type === src.type && p.id === src.profile)
       .flatMap((p) => p.controls);
-    return customs.map((c) => ({ id: c.id, label: c.label }));
+    return customs.map((c) => ({ id: c.id, label: c.label, kind: c.kind }));
   }
 
   // ---- target-typed actions -------------------------------------------------
@@ -103,9 +107,6 @@
     });
   }
 
-  const LED_COLORS = ["green", "red", "orange", "yellow", "cyan", "blue", "purple", "pink", "white"];
-  const LED_MODES = ["on", "blink", "pulse"];
-
   function numdef(v: unknown): number {
     return typeof v === "number" ? v : 0;
   }
@@ -121,7 +122,25 @@
 {:else}
   <SaveBar onsave={() => d.save()} msg={d.msg}>
     <Button onclick={addBinding}>+ Add binding</Button>
+    <Button onclick={() => (showBulk = !showBulk)}>{showBulk ? "✕ Close bulk assign" : "＋ Bulk assign…"}</Button>
   </SaveBar>
+
+  {#if showBulk}
+    <BulkAssign
+      sources={d.cfg.sources}
+      targets={d.cfg.targets}
+      presets={d.meta.presets}
+      triggers={d.meta.triggers}
+      modes={d.meta.modes}
+      existing={d.cfg.bindings}
+      controlsOf={controlsFor}
+      targetTypeOf={(id: string) => d.cfg?.targets.find((t) => t.id === id)?.type ?? ""}
+      onadd={(bs: Binding[]) => {
+        d.cfg && d.cfg.bindings.push(...bs);
+      }}
+      onclose={() => (showBulk = false)}
+    />
+  {/if}
 
   {#if d.cfg.sources.length === 0 || d.cfg.targets.length === 0}
     <EmptyState>
