@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { live } from "$lib/ws.svelte";
   import { api, ApiError } from "$lib/api";
-  import Card from "$lib/ui/Card.svelte";
   import Button from "$lib/ui/Button.svelte";
-  import StatusDot from "$lib/ui/StatusDot.svelte";
+  import Card from "$lib/ui/Card.svelte";
   import Msg from "$lib/ui/Msg.svelte";
   import PageHeader from "$lib/ui/PageHeader.svelte";
+  import StatusDot from "$lib/ui/StatusDot.svelte";
+  import { live } from "$lib/ws.svelte";
+  import { onMount } from "svelte";
 
   let inspectResult = $state<string | null>(null);
   let updateBusy = $state(false);
@@ -33,26 +33,15 @@ Tip: use the built-in virtual Surface tab while developing without a CGO build/b
       const outs = res.result?.out ?? [];
       inspectResult =
         "MIDI inputs:\n" +
-        (ins.length ? ins.map((p) => `  [${p.number}] ${p.name}`).join("\n") : "  (none)") +
+        (ins.length
+          ? ins.map((p) => `  [${p.number}] ${p.name}`).join("\n")
+          : "  (none)") +
         "\nMIDI outputs:\n" +
-        (outs.length ? outs.map((p) => `  [${p.number}] ${p.name}`).join("\n") : "  (none)");
+        (outs.length
+          ? outs.map((p) => `  [${p.number}] ${p.name}`).join("\n")
+          : "  (none)");
     } catch (e) {
       inspectResult = String(e);
-    }
-  }
-
-  async function checkUpdate() {
-    updateBusy = true;
-    updateMsg = null;
-    try {
-      live.update = await api.updateCheck();
-      updateMsg = live.update.available
-        ? { text: `v${live.update.latestVersion} available.`, ok: true }
-        : { text: live.update.error || "You're up to date.", ok: true };
-    } catch (e) {
-      updateMsg = { text: e instanceof ApiError ? e.errors.join("; ") : String(e), ok: false };
-    } finally {
-      updateBusy = false;
     }
   }
 
@@ -63,7 +52,10 @@ Tip: use the built-in virtual Surface tab while developing without a CGO build/b
       const r = await api.updateApply();
       updateMsg = { text: r.message, ok: true };
     } catch (e) {
-      updateMsg = { text: e instanceof ApiError ? e.errors.join("; ") : String(e), ok: false };
+      updateMsg = {
+        text: e instanceof ApiError ? e.errors.join("; ") : String(e),
+        ok: false,
+      };
     } finally {
       updateBusy = false;
     }
@@ -81,7 +73,9 @@ Tip: use the built-in virtual Surface tab while developing without a CGO build/b
         Download &amp; install
       </Button>
       {#if live.update.latestURL}
-        <a href={live.update.latestURL} target="_blank" rel="noreferrer">release notes</a>
+        <a href={live.update.latestURL} target="_blank" rel="noreferrer"
+          >release notes</a
+        >
       {/if}
       <Msg msg={updateMsg} />
     </div>
@@ -93,8 +87,9 @@ Tip: use the built-in virtual Surface tab while developing without a CGO build/b
     {#if live.connectors.length === 0}
       <p class="muted">
         No connectors configured yet — add some under
-        <a href="/sources">Sources</a> / <a href="/targets">Targets</a>.
-        Tip for development without hardware: add a <code>sim</code> source and play on the
+        <a href="/sources">Sources</a> / <a href="/targets">Targets</a>. Tip for
+        development without hardware: add a <code>sim</code> source and play on
+        the
         <a href="/surface">Surface</a> tab.
       </p>
     {:else}
@@ -111,7 +106,9 @@ Tip: use the built-in virtual Surface tab while developing without a CGO build/b
               <td class="muted">{c.type}</td>
               <td>
                 <span class="mono">{c.status.state}</span>
-                {#if c.status.detail}<br /><span class="muted">{c.status.detail}</span>{/if}
+                {#if c.status.detail}<br /><span class="muted"
+                    >{c.status.detail}</span
+                  >{/if}
               </td>
             </tr>
           {/each}
@@ -123,8 +120,9 @@ Tip: use the built-in virtual Surface tab while developing without a CGO build/b
   <Card title="MIDI discovery">
     <p class="muted">
       Lists OS MIDI ports as seen by this build. Use a unique substring as
-      <code>device</code> in a source's options. (Needs a CGO build — release binaries have it;
-      during development without one, use the <a href="/surface">Surface</a> tab.)
+      <code>device</code> in a source's options. (Needs a CGO build — release
+      binaries have it; during development without one, use the
+      <a href="/surface">Surface</a> tab.)
     </p>
     <Button onclick={listMidiPorts}>List MIDI ports</Button>
     {#if inspectResult}
@@ -132,19 +130,6 @@ Tip: use the built-in virtual Surface tab while developing without a CGO build/b
     {/if}
   </Card>
 </div>
-
-<Card title="Software update">
-  <div class="row">
-    <Button onclick={checkUpdate} disabled={updateBusy}>Check now</Button>
-    <Msg msg={updateMsg} />
-    {#if live.update && !live.update.configured && !updateMsg}
-      <span class="muted">
-        Not configured — set <code>updates.repo</code> (&quot;owner/repo&quot;) in
-        <a href="/settings">Settings</a>.
-      </span>
-    {/if}
-  </div>
-</Card>
 
 <Card title="Live activity">
   {#if live.ticker.length === 0}

@@ -18,10 +18,6 @@
   const d = new ConfigDraft();
   onMount(() => d.init());
 
-  function bindings(): Binding[] {
-    return d.cfg?.bindings ?? [];
-  }
-
   function controlsFor(sourceId: string): { id: string; label: string }[] {
     if (!d.cfg || !d.meta) return [];
     const src = d.cfg.sources.find((s) => s.id === sourceId);
@@ -89,6 +85,7 @@
 
   function addBinding() {
     if (!d.cfg) return;
+    if (!d.cfg.bindings) d.cfg.bindings = [];
     const tgt = d.cfg.targets[0]?.id ?? "";
     const tpres = presetsFor(targetTypeOf({ target: tgt } as Binding));
     const action =
@@ -133,14 +130,14 @@
         <a href="/targets">target</a> first.
       </p>
     </EmptyState>
-  {:else if bindings().length === 0}
+  {:else if d.cfg.bindings.length === 0}
     <EmptyState>
       <p>No bindings yet. Press buttons on your board (or the <a href="/surface">Surface</a>) while watching the Dashboard ticker to discover control IDs (<code>pad-0-0</code>, <code>note:36</code>…).</p>
       <Button variant="primary" onclick={addBinding}>+ Add your first binding</Button>
     </EmptyState>
   {/if}
 
-  {#each bindings() as b, i (i)}
+  {#each d.cfg.bindings as b, i (i)}
     {@const tpres = presetsFor(targetTypeOf(b))}
     <Card title={`${b.source}:${b.control || "?"} → ${b.target}`}>
       {#snippet actions()}
