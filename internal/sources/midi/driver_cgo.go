@@ -182,13 +182,16 @@ func (c *rtConn) Close() error {
 		// callback runs can crash the process.
 		_ = c.in.CancelCallback()
 		time.Sleep(100 * time.Millisecond)
+		// NOTE: in this binding version (rtmididrv imported/rtmidi) Close()
+		// already frees the native object (rtmidi_in_free). Calling Close()
+		// *and* Destroy() double-frees it, crashing the process inside the
+		// RtMidi C++ destructor (null vtable → access violation).
 		_ = c.in.Close()
-		c.in.Destroy()
 		c.in = nil
 	}
 	if c.out != nil {
+		// Same as above: Close() frees; no Destroy().
 		_ = c.out.Close()
-		c.out.Destroy()
 		c.out = nil
 	}
 	return nil
