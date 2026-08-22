@@ -135,11 +135,19 @@ func (p *Profile) addButton(note uint8, id, label string, hasLED bool) {
 }
 
 // addControl appends the control and keeps the by-ID lookup in sync.
+// The Controls inventory is unique by control ID: one control may be
+// reachable through several message routes (e.g. MPK mini mk3 pads are
+// registered as both note- AND CC-triggered via addButton+addButtonCC),
+// but it must appear in Controls only once — the UI keys option lists by
+// control ID (Svelte each_key_duplicate otherwise).
 func (p *Profile) addControl(c core.Control) {
-	p.Controls = append(p.Controls, c)
 	if p.byID == nil {
 		p.byID = map[string]core.Control{}
 	}
+	if _, exists := p.byID[c.ID]; exists {
+		return
+	}
+	p.Controls = append(p.Controls, c)
 	p.byID[c.ID] = c
 }
 

@@ -6,8 +6,8 @@ import "strconv"
 // Akai MPK mini MK3 — VERIFIED on real hardware (factory default program).
 //
 // Measured with `show-mapper midi monitor`:
-//   touch pads        Bank A: 16-23 Bank B:32–39   (press 127 / release 0) → pad-a-1..8 / pad-b-1..8
-//   CC touch pads 		 Bank A: 16-23 Bank B:32–39   (press 127 / release 0) → pad-a-1..8 / pad-b-1..8
+//   touch pads        Bank A: note 16–23, CC 32–39       (press 127 / release 0) → pad-a-1..8
+//                     Bank B: note 32–39                                          → pad-b-1..8
 //   knobs (potis)     CC 16–23   (absolute 0..127)       → knob-1..8
 //   joystick          CC 80 (X), CC 81 (Y)               → joystick-x/-y
 //   keyboard          25 keys, notes 48–72 (C3–C5)       → key-c3 … key-c5
@@ -25,14 +25,11 @@ func mpkMiniMk3() *Profile {
 		ledNone{}, nil,
 	)
 
-	// 8 touch pads: Bank A: 16-23 Bank B: 32–39, press=127/release=0 (threshold-decoded by the source).
 	for i := uint8(1); i <= 8; i++ {
 		p.addButton(15+i, padID(i, "a"), padLabel(i, "A"), true)
-		p.addButtonCC(15+i, padID(i, "a"), padLabel(i, "A"), true)
 	}
 	for i := uint8(1); i <= 8; i++ {
 		p.addButton(31+i, padID(i, "b"), padLabel(i, "B"), true)
-		p.addButtonCC(31+i, padID(i, "b"), padLabel(i, "B"), true)
 	}
 
 	// Knobs K1–K8: CC 16–23 (absolute).

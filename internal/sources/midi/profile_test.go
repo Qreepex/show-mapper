@@ -110,19 +110,18 @@ func TestProfileFromConfig(t *testing.T) {
 	}
 }
 
-func assertMsgs(t *testing.T, a, b [][]byte) {
-	t.Helper()
-	if len(a) != len(b) {
-		t.Fatalf("message count %d ≠ %d (%v vs %v)", len(a), len(b), a, b)
-	}
-	for i := range a {
-		if len(a[i]) != len(b[i]) {
-			t.Fatalf("msg %d length %d ≠ %d", i, len(a[i]), len(b[i]))
-		}
-		for j := range a[i] {
-			if a[i][j] != b[i][j] {
-				t.Fatalf("msg %d byte %d: %02x ≠ %02x (got % X want % X)", i, j, a[i][j], b[i][j], a, b)
+func TestBuiltinProfilesUniqueControlIDs(t *testing.T) {
+	// The UI keys option lists by control ID — duplicates crash the
+	// bindings editor (Svelte each_key_duplicate). Custom profiles are
+	// guarded by config.Validate() ("duplicate control id"); built-ins
+	// must be guarded here.
+	for _, p := range profiles {
+		seen := map[string]bool{}
+		for _, c := range p.Controls {
+			if seen[c.ID] {
+				t.Errorf("profile %s: duplicate control id %q", p.ID, c.ID)
 			}
+			seen[c.ID] = true
 		}
 	}
 }
@@ -159,6 +158,23 @@ func TestMpkMiniMk3Mapping(t *testing.T) {
 	}
 	if found := ProfileForDevice("MPK mini 3"); found == nil || found.ID != "mpk-mini-mk3" {
 		t.Errorf("device auto-detect → %v", found)
+	}
+}
+
+func assertMsgs(t *testing.T, a, b [][]byte) {
+	t.Helper()
+	if len(a) != len(b) {
+		t.Fatalf("message count %d ≠ %d (%v vs %v)", len(a), len(b), a, b)
+	}
+	for i := range a {
+		if len(a[i]) != len(b[i]) {
+			t.Fatalf("msg %d length %d ≠ %d", i, len(a[i]), len(b[i]))
+		}
+		for j := range a[i] {
+			if a[i][j] != b[i][j] {
+				t.Fatalf("msg %d byte %d: %02x ≠ %02x (got % X want % X)", i, j, a[i][j], b[i][j], a, b)
+			}
+		}
 	}
 }
 
