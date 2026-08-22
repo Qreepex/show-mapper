@@ -11,8 +11,6 @@ web/build/
 # Committed placeholders index.html / 200.html must survive in git;
 # real build output stays untracked noise.
 internal/server/dist/*
-!internal/server/dist/index.html
-!internal/server/dist/200.html
 
 # --- Local runtime config (never commit a show IP config by accident) ---
 show-mapper.yaml

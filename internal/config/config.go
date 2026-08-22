@@ -274,8 +274,12 @@ const (
 // Default returns a minimal working configuration.
 func Default() Config {
 	return Config{
-		Version: SchemaVersion,
-		HTTP:    HTTPConfig{Listen: "127.0.0.1:8484"},
+		Version:  SchemaVersion,
+		HTTP:     HTTPConfig{Listen: "127.0.0.1:8484"},
+		Sources:  []SourceConfig{},
+		Targets:  []TargetConfig{},
+		Bindings: []Binding{},
+		Profiles: []ProfileConfig{},
 	}
 }
 

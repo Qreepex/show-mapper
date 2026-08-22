@@ -6,11 +6,11 @@ import "strconv"
 // Akai MPK mini MK3 — VERIFIED on real hardware (factory default program).
 //
 // Measured with `show-mapper midi monitor`:
-//   touch pads        CC 32–39   (press 127 / release 0) → pad-a-1..8
+//   touch pads        Bank A: 16-23 Bank B:32–39   (press 127 / release 0) → pad-a-1..8 / pad-b-1..8
+//   CC touch pads 		 Bank A: 16-23 Bank B:32–39   (press 127 / release 0) → pad-a-1..8 / pad-b-1..8
 //   knobs (potis)     CC 16–23   (absolute 0..127)       → knob-1..8
 //   joystick          CC 80 (X), CC 81 (Y)               → joystick-x/-y
 //   keyboard          25 keys, notes 48–72 (C3–C5)       → key-c3 … key-c5
-//   sustain pedal     CC 64 (raw cc:64)
 //
 // Note: older docs/third-party claims assumed pads=notes 36–43/44–51 and
 // knobs=CC 70–77 — those were wrong for this unit. Edit freely if your
@@ -25,9 +25,14 @@ func mpkMiniMk3() *Profile {
 		ledNone{}, nil,
 	)
 
-	// 8 touch pads: CC 32–39, press=127/release=0 (threshold-decoded by the source).
+	// 8 touch pads: Bank A: 16-23 Bank B: 32–39, press=127/release=0 (threshold-decoded by the source).
 	for i := uint8(1); i <= 8; i++ {
-		p.addButtonCC(31+i, padID(i), padLabel(i), false)
+		p.addButton(15+i, padID(i, "a"), padLabel(i, "A"), true)
+		p.addButtonCC(15+i, padID(i, "a"), padLabel(i, "A"), true)
+	}
+	for i := uint8(1); i <= 8; i++ {
+		p.addButton(31+i, padID(i, "b"), padLabel(i, "B"), true)
+		p.addButtonCC(31+i, padID(i, "b"), padLabel(i, "B"), true)
 	}
 
 	// Knobs K1–K8: CC 16–23 (absolute).
@@ -54,10 +59,10 @@ func mpkMiniMk3() *Profile {
 // Naming helpers
 // ---------------------------------------------------------------------------
 
-func padID(i uint8) string   { return "pad-a-" + strconv.Itoa(int(i)) }
-func padLabel(i uint8) string  { return "Pad A" + strconv.Itoa(int(i)) }
-func knobID(i uint8) string   { return "knob-" + strconv.Itoa(int(i)) }
-func knobLabel(i uint8) string { return "Knob " + strconv.Itoa(int(i)) }
+func padID(i uint8, bank string) string    { return "pad-" + bank + "-" + strconv.Itoa(int(i)) }
+func padLabel(i uint8, bank string) string { return "Pad " + bank + strconv.Itoa(int(i)) }
+func knobID(i uint8) string                { return "knob-" + strconv.Itoa(int(i)) }
+func knobLabel(i uint8) string             { return "Knob " + strconv.Itoa(int(i)) }
 
 // noteName returns the control ID and human-readable label for a MIDI note
 // number. Sharp notes get "s" in the ID (e.g. "key-cs3") and "♯" in the
@@ -80,11 +85,10 @@ func noteName(note uint8) (id, label string) {
 		{"gs", "G♯"}, // 8
 		{"a", "A"},   // 9
 		{"as", "A♯"}, // 10
-		{"b", "B"},   // 11
+		{"h", "H"},   // 11
 	}
 	n := names[semitone]
 	id = "key-" + n.idShort + strconv.Itoa(octave)
 	label = n.labelShort + strconv.Itoa(octave)
 	return
 }
-
