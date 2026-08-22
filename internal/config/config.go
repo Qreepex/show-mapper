@@ -477,6 +477,19 @@ func (c *Config) applyDefaults() {
 	if c.HTTP.Listen == "" {
 		c.HTTP.Listen = "127.0.0.1:8484"
 	}
+	// nil slices → empty so JSON never emits null (frontend expects arrays).
+	if c.Sources == nil {
+		c.Sources = []SourceConfig{}
+	}
+	if c.Targets == nil {
+		c.Targets = []TargetConfig{}
+	}
+	if c.Bindings == nil {
+		c.Bindings = []Binding{}
+	}
+	if c.Profiles == nil {
+		c.Profiles = []ProfileConfig{}
+	}
 	for i := range c.Bindings {
 		b := &c.Bindings[i]
 		if b.Mode == "" {
